@@ -2,7 +2,7 @@
 
 **Telas do protótipo:** 02 e 03.
 
-**Responsável:** a confirmar pela equipe.
+**Responsável:** Josiane
 
 Esta pasta é destinada aos componentes e à lógica específicos desta funcionalidade.
 As rotas navegáveis do aplicativo devem ser criadas em `src/app/` e importar os componentes desta pasta.
