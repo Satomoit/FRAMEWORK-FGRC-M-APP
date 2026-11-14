@@ -8,4 +8,5 @@ Esta pasta é destinada aos componentes e à lógica específicos desta funciona
 As rotas navegáveis do aplicativo devem ser criadas em `src/app/` e importar os componentes desta pasta.
 Mantenha estilos e componentes exclusivos aqui; componentes compartilhados ficam em `src/components/`.
 
-**Issue/PR:** adicionar quando disponível.
+**Issue/PR:**
+Issue: #45 | PR: #1
