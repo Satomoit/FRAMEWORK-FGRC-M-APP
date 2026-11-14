@@ -1,5 +1,7 @@
 import { useRef, useState, type ComponentRef } from 'react';
 import {
+    ActivityIndicator,
+    Keyboard,
     KeyboardAvoidingView,
     Platform,
     Pressable,
@@ -11,15 +13,27 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { supabase } from '@/lib/supabase';
+
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [mensagem, setMensagem] = useState('');
+  const [sucesso, setSucesso] = useState(false);
+  const [carregando, setCarregando] = useState(false);
 
   const senhaRef = useRef<ComponentRef<typeof TextInput>>(null);
+  const enviandoRef = useRef(false);
 
-  function entrar() {
+  function limparMensagem() {
     setMensagem('');
+    setSucesso(false);
+  }
+
+  async function entrar() {
+    if (enviandoRef.current) return;
+
+    limparMensagem();
 
     if (!email.trim() || !senha.trim()) {
       setMensagem('Preencha o e-mail e a senha.');
@@ -33,9 +47,49 @@ export default function LoginScreen() {
       return;
     }
 
-    setMensagem(
-      'Campos validados. A autenticação ainda será integrada.'
-    );
+    Keyboard.dismiss();
+    enviandoRef.current = true;
+    setCarregando(true);
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: senha,
+      });
+
+      if (error) {
+        if (error.code === 'invalid_credentials') {
+          setMensagem('E-mail ou senha incorretos.');
+        } else if (error.code === 'email_not_confirmed') {
+          setMensagem('Confirme seu e-mail antes de entrar.');
+        } else if (error.status === 429) {
+          setMensagem('Muitas tentativas. Aguarde e tente novamente.');
+        } else {
+          setMensagem(
+            'Não foi possível entrar. Verifique sua conexão e tente novamente.'
+          );
+        }
+        return;
+      }
+
+      if (!data.session) {
+        setMensagem('Não foi possível iniciar a sessão. Tente novamente.');
+        return;
+      }
+
+      setSenha('');
+      setSucesso(true);
+      setMensagem(
+        'Login realizado com sucesso! A página inicial será conectada na próxima etapa.'
+      );
+    } catch {
+      setMensagem(
+        'Não foi possível conectar. Verifique sua internet e tente novamente.'
+      );
+    } finally {
+      enviandoRef.current = false;
+      setCarregando(false);
+    }
   }
 
   return (
@@ -55,7 +109,6 @@ export default function LoginScreen() {
               </View>
 
               <View style={styles.orangeLine} />
-
               <Text style={styles.brand}>FGRC-M</Text>
 
               <Text style={styles.subtitle}>
@@ -65,7 +118,6 @@ export default function LoginScreen() {
 
             <View style={styles.welcome}>
               <Text style={styles.title}>Bem-vindo(a)!</Text>
-
               <Text style={styles.description}>
                 Entre para continuar sua avaliação.
               </Text>
@@ -82,8 +134,9 @@ export default function LoginScreen() {
                 value={email}
                 onChangeText={(value) => {
                   setEmail(value);
-                  setMensagem('');
+                  limparMensagem();
                 }}
+                editable={!carregando}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -105,32 +158,38 @@ export default function LoginScreen() {
                 value={senha}
                 onChangeText={(value) => {
                   setSenha(value);
-                  setMensagem('');
+                  limparMensagem();
                 }}
+                editable={!carregando}
                 secureTextEntry
                 autoCapitalize="none"
                 autoCorrect={false}
                 autoComplete="current-password"
                 returnKeyType="go"
-                onSubmitEditing={entrar}
+                onSubmitEditing={() => void entrar()}
               />
             </View>
 
             <Pressable
               accessibilityRole="button"
               style={styles.forgotButton}
-              onPress={() =>
+              disabled={carregando}
+              onPress={() => {
+                limparMensagem();
                 setMensagem(
-                  'A recuperação de senha será integrada à tela P07.'
-                )
-              }
+                  'A recuperação de senha será conectada à funcionalidade P07.'
+                );
+              }}
             >
               <Text style={styles.link}>Esqueci minha senha</Text>
             </Pressable>
 
             {mensagem !== '' && (
               <Text
-                style={styles.message}
+                style={[
+                  styles.message,
+                  sucesso && styles.successMessage,
+                ]}
                 accessibilityLiveRegion="polite"
               >
                 {mensagem}
@@ -139,13 +198,25 @@ export default function LoginScreen() {
 
             <Pressable
               accessibilityRole="button"
-              onPress={entrar}
+              accessibilityState={{
+                disabled: carregando,
+                busy: carregando,
+              }}
+              disabled={carregando}
+              onPress={() => void entrar()}
               style={({ pressed }) => [
                 styles.loginButton,
-                pressed && styles.pressed,
+                (pressed || carregando) && styles.pressed,
               ]}
             >
-              <Text style={styles.loginButtonText}>Entrar</Text>
+              {carregando ? (
+                <View style={styles.loadingRow}>
+                  <ActivityIndicator color="#FFFFFF" />
+                  <Text style={styles.loginButtonText}>Entrando...</Text>
+                </View>
+              ) : (
+                <Text style={styles.loginButtonText}>Entrar</Text>
+              )}
             </Pressable>
 
             <View style={styles.registerRow}>
@@ -156,11 +227,13 @@ export default function LoginScreen() {
               <Pressable
                 accessibilityRole="button"
                 style={styles.registerButton}
-                onPress={() =>
+                disabled={carregando}
+                onPress={() => {
+                  limparMensagem();
                   setMensagem(
-                    'A solicitação de acesso será integrada à tela P02.'
-                  )
-                }
+                    'A solicitação de acesso será conectada à funcionalidade P02.'
+                  );
+                }}
               >
                 <Text style={styles.link}>Solicitar acesso</Text>
               </Pressable>
@@ -282,6 +355,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
+  successMessage: {
+    color: '#14532D',
+    backgroundColor: '#DCFCE7',
+  },
   loginButton: {
     backgroundColor: '#11558B',
     minHeight: 56,
@@ -291,6 +368,11 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.8,
+  },
+  loadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   loginButtonText: {
     color: '#FFFFFF',
