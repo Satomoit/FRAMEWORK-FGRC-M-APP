@@ -1,5 +1,6 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Redirect } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ComponentProps } from 'react';
 import {
     ActivityIndicator,
     Modal,
@@ -12,6 +13,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { supabase } from '@/lib/supabase';
+
+type NomeIcone = ComponentProps<typeof Ionicons>['name'];
 
 type DadosInicio = {
   prefeitura: string | null;
@@ -33,12 +36,12 @@ const dadosIniciais: DadosInicio = {
   pontosAtencao: [],
 };
 
-const itensMenu = [
-  { nome: 'Início', simbolo: '⌂' },
-  { nome: 'Avaliações', simbolo: '☑' },
-  { nome: 'Resultados', simbolo: '▥' },
-  { nome: 'Relatórios', simbolo: '▤' },
-  { nome: 'Mais', simbolo: '☰' },
+const itensMenu: { nome: string; icone: NomeIcone }[] = [
+  { nome: 'Início', icone: 'home-outline' },
+  { nome: 'Avaliações', icone: 'clipboard-outline' },
+  { nome: 'Resultados', icone: 'stats-chart-outline' },
+  { nome: 'Relatórios', icone: 'document-text-outline' },
+  { nome: 'Mais', icone: 'menu-outline' },
 ];
 
 export default function HomeScreen() {
@@ -48,7 +51,7 @@ export default function HomeScreen() {
   const [saindo, setSaindo] = useState(false);
   const [mensagem, setMensagem] = useState('');
 
-  // Receberá os dados reais quando a fonte das avaliações for integrada.
+  // Preencher pela fonte real das avaliações quando ela for integrada.
   const [dados] = useState<DadosInicio>(dadosIniciais);
 
   useEffect(() => {
@@ -63,6 +66,7 @@ export default function HomeScreen() {
   }, []);
 
   function abrirFuncionalidade(nome: string) {
+    setMaisAberto(false);
     setMensagem(
       `${nome} ainda não está disponível nesta versão do aplicativo.`
     );
@@ -72,12 +76,12 @@ export default function HomeScreen() {
     if (saindo) return;
 
     setSaindo(true);
-    setMensagem('');
 
     try {
       const { error } = await supabase.auth.signOut();
 
       if (error) {
+        setMaisAberto(false);
         setMensagem('Não foi possível sair. Tente novamente.');
         return;
       }
@@ -85,6 +89,7 @@ export default function HomeScreen() {
       setMaisAberto(false);
       setAutenticado(false);
     } catch {
+      setMaisAberto(false);
       setMensagem('Não foi possível sair. Verifique sua conexão.');
     } finally {
       setSaindo(false);
@@ -121,7 +126,6 @@ export default function HomeScreen() {
         >
           <View style={styles.header}>
             <Text style={styles.title}>Olá, gestor(a)!</Text>
-
             <Text style={styles.subtitle}>
               {dados.prefeitura ?? 'Prefeitura vinculada: —'}
             </Text>
@@ -131,7 +135,6 @@ export default function HomeScreen() {
             <Text style={styles.cardTitle}>
               Avaliação em andamento
             </Text>
-
             <Text style={styles.subtitle}>
               Continue de onde parou
             </Text>
@@ -139,11 +142,7 @@ export default function HomeScreen() {
             <View
               style={styles.progressTrack}
               accessibilityRole="progressbar"
-              accessibilityLabel={
-                progresso === null
-                  ? 'Progresso ainda não disponível'
-                  : 'Progresso da avaliação'
-              }
+              accessibilityLabel="Progresso da avaliação"
               accessibilityValue={
                 progresso === null
                   ? { text: 'Não disponível' }
@@ -194,7 +193,6 @@ export default function HomeScreen() {
             <Text style={styles.summaryText}>
               Última avaliação: {dados.ultimaAvaliacao ?? '—'}
             </Text>
-
             <Text style={styles.summaryText}>
               Prioridades:{' '}
               {dados.quantidadePrioridades === null
@@ -220,22 +218,24 @@ export default function HomeScreen() {
                   {index > 0 && <View style={styles.divider} />}
 
                   <View style={styles.attentionRow}>
-                    <Text
+                    <Ionicons
+                      name={
+                        ponto.prioridade === 'alta'
+                          ? 'shield-outline'
+                          : 'alert-circle-outline'
+                      }
+                      size={23}
+                      color={
+                        ponto.prioridade === 'alta'
+                          ? '#C62828'
+                          : '#B87512'
+                      }
                       accessibilityLabel={
                         ponto.prioridade === 'alta'
                           ? 'Prioridade alta'
                           : 'Prioridade média'
                       }
-                      style={[
-                        styles.alertSymbol,
-                        ponto.prioridade === 'alta'
-                          ? styles.highPriority
-                          : styles.mediumPriority,
-                      ]}
-                    >
-                      !
-                    </Text>
-
+                    />
                     <Text style={styles.attentionText}>
                       {ponto.titulo}
                     </Text>
@@ -256,7 +256,11 @@ export default function HomeScreen() {
               ]}
               onPress={() => abrirFuncionalidade('Relatórios')}
             >
-              <Text style={styles.quickSymbol}>▤</Text>
+              <Ionicons
+                name="document-text-outline"
+                size={25}
+                color="#111111"
+              />
               <Text style={styles.quickText}>Relatórios</Text>
             </Pressable>
 
@@ -268,7 +272,11 @@ export default function HomeScreen() {
               ]}
               onPress={() => abrirFuncionalidade('Nova avaliação')}
             >
-              <Text style={styles.quickSymbol}>⊕</Text>
+              <Ionicons
+                name="add-circle-outline"
+                size={25}
+                color="#111111"
+              />
               <Text style={styles.quickText}>Nova avaliação</Text>
             </Pressable>
           </View>
@@ -296,14 +304,11 @@ export default function HomeScreen() {
                   }
                 }}
               >
-                <Text
-                  style={[
-                    styles.navSymbol,
-                    selecionado && styles.activeText,
-                  ]}
-                >
-                  {item.simbolo}
-                </Text>
+                <Ionicons
+                  name={item.icone}
+                  size={27}
+                  color={selecionado ? '#FF8C28' : '#111111'}
+                />
               </Pressable>
             );
           })}
@@ -318,13 +323,14 @@ export default function HomeScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            <Text style={styles.sectionTitle}>Mais</Text>
+            <Text style={styles.modalTitle}>Mais</Text>
 
             <Pressable
               accessibilityRole="button"
               style={styles.menuItem}
               onPress={() => abrirFuncionalidade('Meu perfil')}
             >
+              <Ionicons name="person-outline" size={23} color="#17263E" />
               <Text style={styles.menuText}>Meu perfil</Text>
             </Pressable>
 
@@ -333,6 +339,7 @@ export default function HomeScreen() {
               style={styles.menuItem}
               onPress={() => abrirFuncionalidade('Configurações')}
             >
+              <Ionicons name="settings-outline" size={23} color="#17263E" />
               <Text style={styles.menuText}>Configurações</Text>
             </Pressable>
 
@@ -343,18 +350,22 @@ export default function HomeScreen() {
                 abrirFuncionalidade('Privacidade e termos')
               }
             >
-              <Text style={styles.menuText}>
-                Privacidade e termos
-              </Text>
+              <Ionicons
+                name="shield-checkmark-outline"
+                size={23}
+                color="#17263E"
+              />
+              <Text style={styles.menuText}>Privacidade e termos</Text>
             </Pressable>
 
             <Pressable
               accessibilityRole="button"
               disabled={saindo}
-              accessibilityState={{ disabled: saindo }}
+              accessibilityState={{ disabled: saindo, busy: saindo }}
               style={styles.menuItem}
               onPress={() => void sair()}
             >
+              <Ionicons name="log-out-outline" size={23} color="#B42318" />
               <Text style={styles.logoutText}>
                 {saindo ? 'Saindo...' : 'Sair da conta'}
               </Text>
@@ -522,24 +533,6 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingVertical: 20,
   },
-  alertSymbol: {
-    width: 22,
-    height: 25,
-    borderWidth: 2,
-    borderRadius: 10,
-    textAlign: 'center',
-    fontSize: 16,
-    fontWeight: '700',
-    lineHeight: 20,
-  },
-  highPriority: {
-    color: '#C62828',
-    borderColor: '#C62828',
-  },
-  mediumPriority: {
-    color: '#B87512',
-    borderColor: '#B87512',
-  },
   attentionText: {
     flex: 1,
     color: '#111111',
@@ -564,11 +557,7 @@ const styles = StyleSheet.create({
     padding: 14,
     justifyContent: 'center',
     minHeight: 78,
-  },
-  quickSymbol: {
-    fontSize: 23,
-    color: '#111111',
-    marginBottom: 3,
+    gap: 4,
   },
   quickText: {
     color: '#111111',
@@ -589,13 +578,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  navSymbol: {
-    fontSize: 28,
-    color: '#111111',
-  },
-  activeText: {
-    color: '#FF8C28',
-  },
   pressed: {
     opacity: 0.7,
   },
@@ -613,13 +595,22 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 22,
   },
+  modalTitle: {
+    color: '#17263E',
+    fontSize: 21,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
   menuItem: {
-    minHeight: 52,
-    justifyContent: 'center',
+    minHeight: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#E6EDF5',
   },
   menuText: {
+    flex: 1,
     color: '#17263E',
     fontSize: 16,
   },

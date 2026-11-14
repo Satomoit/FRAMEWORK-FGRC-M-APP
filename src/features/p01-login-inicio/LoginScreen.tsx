@@ -1,15 +1,16 @@
 import { useRef, useState, type ComponentRef } from 'react';
 import {
-    ActivityIndicator,
-    Keyboard,
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Image,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -19,21 +20,15 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [mensagem, setMensagem] = useState('');
-  const [sucesso, setSucesso] = useState(false);
   const [carregando, setCarregando] = useState(false);
 
   const senhaRef = useRef<ComponentRef<typeof TextInput>>(null);
   const enviandoRef = useRef(false);
 
-  function limparMensagem() {
-    setMensagem('');
-    setSucesso(false);
-  }
-
   async function entrar() {
     if (enviandoRef.current) return;
 
-    limparMensagem();
+    setMensagem('');
 
     if (!email.trim() || !senha.trim()) {
       setMensagem('Preencha o e-mail e a senha.');
@@ -78,10 +73,7 @@ export default function LoginScreen() {
       }
 
       setSenha('');
-      setSucesso(true);
-      setMensagem(
-        'Login realizado com sucesso! A página inicial será conectada na próxima etapa.'
-      );
+      // A rota index.tsx detecta a sessão e abre a página inicial.
     } catch {
       setMensagem(
         'Não foi possível conectar. Verifique sua internet e tente novamente.'
@@ -104,11 +96,14 @@ export default function LoginScreen() {
         >
           <View style={styles.content}>
             <View style={styles.header}>
-              <View style={styles.logo} accessibilityLabel="FGRC-M">
-                <Text style={styles.logoSymbol}>✓</Text>
-              </View>
+              <Image
+                source={require('../../../assets/images/logo-fgrcm.png')}
+                style={styles.logo}
+                resizeMode="contain"
+                accessible
+                accessibilityLabel="Escudo FGRC-M"
+              />
 
-              <View style={styles.orangeLine} />
               <Text style={styles.brand}>FGRC-M</Text>
 
               <Text style={styles.subtitle}>
@@ -118,6 +113,7 @@ export default function LoginScreen() {
 
             <View style={styles.welcome}>
               <Text style={styles.title}>Bem-vindo(a)!</Text>
+
               <Text style={styles.description}>
                 Entre para continuar sua avaliação.
               </Text>
@@ -134,7 +130,7 @@ export default function LoginScreen() {
                 value={email}
                 onChangeText={(value) => {
                   setEmail(value);
-                  limparMensagem();
+                  setMensagem('');
                 }}
                 editable={!carregando}
                 keyboardType="email-address"
@@ -158,7 +154,7 @@ export default function LoginScreen() {
                 value={senha}
                 onChangeText={(value) => {
                   setSenha(value);
-                  limparMensagem();
+                  setMensagem('');
                 }}
                 editable={!carregando}
                 secureTextEntry
@@ -174,22 +170,18 @@ export default function LoginScreen() {
               accessibilityRole="button"
               style={styles.forgotButton}
               disabled={carregando}
-              onPress={() => {
-                limparMensagem();
+              onPress={() =>
                 setMensagem(
-                  'A recuperação de senha será conectada à funcionalidade P07.'
-                );
-              }}
+                  'A recuperação de senha ainda não está disponível nesta versão.'
+                )
+              }
             >
               <Text style={styles.link}>Esqueci minha senha</Text>
             </Pressable>
 
             {mensagem !== '' && (
               <Text
-                style={[
-                  styles.message,
-                  sucesso && styles.successMessage,
-                ]}
+                style={styles.message}
                 accessibilityLiveRegion="polite"
               >
                 {mensagem}
@@ -228,12 +220,11 @@ export default function LoginScreen() {
                 accessibilityRole="button"
                 style={styles.registerButton}
                 disabled={carregando}
-                onPress={() => {
-                  limparMensagem();
+                onPress={() =>
                   setMensagem(
-                    'A solicitação de acesso será conectada à funcionalidade P02.'
-                  );
-                }}
+                    'A solicitação de acesso ainda não está disponível nesta versão.'
+                  )
+                }
               >
                 <Text style={styles.link}>Solicitar acesso</Text>
               </Pressable>
@@ -269,25 +260,9 @@ const styles = StyleSheet.create({
     marginBottom: 54,
   },
   logo: {
-    width: 44,
-    height: 48,
-    backgroundColor: '#11558B',
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoSymbol: {
-    color: '#FFFFFF',
-    fontSize: 28,
-    fontWeight: '700',
-  },
-  orangeLine: {
-    width: 40,
-    height: 4,
-    backgroundColor: '#FF8C28',
-    borderRadius: 2,
-    marginTop: 5,
-    marginBottom: 8,
+    width: 74,
+    height: 74,
+    marginBottom: 6,
   },
   brand: {
     color: '#17263E',
@@ -354,10 +329,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     fontSize: 14,
     lineHeight: 20,
-  },
-  successMessage: {
-    color: '#14532D',
-    backgroundColor: '#DCFCE7',
   },
   loginButton: {
     backgroundColor: '#11558B',
