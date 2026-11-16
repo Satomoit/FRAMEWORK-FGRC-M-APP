@@ -1,98 +1,289 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
+
+import { useState } from 'react';
+import {
+  Alert,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+
+import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+export default function SolicitarAcesso() {
+  const router = useRouter();
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
+  const [nome, setNome] = useState('');
+  const [email, setEmail] = useState('');
+  const [prefeitura, setPrefeitura] = useState('');
+  const [municipio, setMunicipio] = useState('');
+  const [estado, setEstado] = useState('');
+
+  // Validar os campos e abrir a Tela 02
+  const enviarSolicitacao = () => {
+    const camposValidos =
+      nome.trim().length > 0 &&
+      email.trim().length > 0 &&
+      prefeitura.trim().length > 0 &&
+      municipio.trim().length > 0 &&
+      estado.trim().length > 0;
+
+    if (!camposValidos) {
+      Alert.alert(
+        'Campos obrigatórios',
+        'Preencha todos os campos para continuar.'
+      );
+      return;
+    }
+
+    Keyboard.dismiss();
+
+    // Navegação da Tela 01 para a Tela 02
+    router.push('/explore');
+  };
+
   return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar style="dark" backgroundColor="#F4F7FC" />
 
-export default function HomeScreen() {
-  return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Botão voltar */}
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.backArrow}>‹</Text>
+          </TouchableOpacity>
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
+          {/* Cabeçalho */}
+          <View style={styles.header}>
+            <Text style={styles.title}>
+              Solicitar acesso
+            </Text>
 
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
+            <Text style={styles.description}>
+              Preencha seus dados institucionais para solicitar
+              acesso à plataforma.
+            </Text>
+          </View>
 
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+          {/* Formulário */}
+          <View style={styles.form}>
+
+            {/* Nome completo */}
+            <View style={styles.field}>
+              <Text style={styles.label}>Nome completo</Text>
+
+              <TextInput
+                style={styles.input}
+                placeholder="Digite seu nome completo..."
+                placeholderTextColor="#65758B"
+                value={nome}
+                onChangeText={setNome}
+                autoCapitalize="words"
+              />
+            </View>
+
+            {/* E-mail institucional */}
+            <View style={styles.field}>
+              <Text style={styles.label}>E-mail institucional</Text>
+
+              <TextInput
+                style={styles.input}
+                placeholder="Digite seu e-mail institucional..."
+                placeholderTextColor="#65758B"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
+
+            {/* Prefeitura */}
+            <View style={styles.field}>
+              <Text style={styles.label}>Prefeitura</Text>
+
+              <TextInput
+                style={styles.input}
+                placeholder="Digite o nome da prefeitura..."
+                placeholderTextColor="#65758B"
+                value={prefeitura}
+                onChangeText={setPrefeitura}
+              />
+            </View>
+
+            {/* Município */}
+            <View style={styles.field}>
+              <Text style={styles.label}>Município</Text>
+
+              <TextInput
+                style={styles.input}
+                placeholder="Digite seu município..."
+                placeholderTextColor="#65758B"
+                value={municipio}
+                onChangeText={setMunicipio}
+              />
+            </View>
+
+            {/* Estado */}
+            <View style={styles.field}>
+              <Text style={styles.label}>Estado</Text>
+
+              <TextInput
+                style={styles.input}
+                placeholder="Digite seu estado..."
+                placeholderTextColor="#65758B"
+                value={estado}
+                onChangeText={setEstado}
+              />
+            </View>
+
+            {/* Enviar solicitação */}
+            <TouchableOpacity
+              style={styles.submitButton}
+              onPress={enviarSolicitacao}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.submitText}>
+                Enviar solicitação
+              </Text>
+            </TouchableOpacity>
+
+            {/* Voltar para login */}
+            <TouchableOpacity
+              style={styles.loginButton}
+              activeOpacity={0.7}
+              onPress={() => router.back()}
+            >
+              <Text style={styles.loginText}>
+                Voltar para login
+              </Text>
+            </TouchableOpacity>
+
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
   safeArea: {
     flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
+    backgroundColor: '#F4F7FC',
   },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
+
+  container: {
     flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
   },
+
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingTop: 4,
+    paddingBottom: 30,
+  },
+
+  backButton: {
+    width: 32,
+    height: 35,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    marginBottom: 22,
+  },
+
+  backArrow: {
+    fontSize: 34,
+    color: '#152943',
+    lineHeight: 36,
+    fontWeight: '300',
+  },
+
+  header: {
+    marginBottom: 15,
+  },
+
   title: {
-    textAlign: 'center',
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#172A43',
+    marginBottom: 3,
   },
-  code: {
-    textTransform: 'uppercase',
+
+  description: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#536782',
   },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
+
+  form: {
+    width: '100%',
+  },
+
+  field: {
+    marginBottom: 10,
+  },
+
+  label: {
+    fontSize: 13,
+    color: '#152943',
+    marginBottom: 5,
+    fontWeight: '400',
+  },
+
+  input: {
+    height: 47,
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#71849C',
+    borderRadius: 12,
+    paddingHorizontal: 13,
+    backgroundColor: '#FFFFFF',
+    fontSize: 13,
+    color: '#172A43',
+  },
+
+  submitButton: {
+    height: 47,
+    backgroundColor: '#12558F',
+    borderRadius: 11,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 5,
+  },
+
+  submitText: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+
+  loginButton: {
+    alignSelf: 'center',
+    marginTop: 9,
+    paddingVertical: 2,
+  },
+
+  loginText: {
+    color: '#F07819',
+    fontSize: 13,
+    textDecorationLine: 'underline',
+    fontWeight: '500',
   },
 });
