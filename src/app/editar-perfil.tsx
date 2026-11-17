@@ -1,62 +1,60 @@
-
-import { useState } from 'react';
+import { useState } from "react";
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
-import { useRouter } from 'expo-router';
+import { useRouter } from "expo-router";
 
 export default function EditarPerfil() {
   const router = useRouter();
 
-  const [nome, setNome] = useState('Maria da Silva');
-  const [email, setEmail] = useState('maria@prefeitura.gov.br');
+  const [nome, setNome] = useState("Maria da Silva");
+  const [email, setEmail] = useState("maria@prefeitura.gov.br");
 
-  const [prefeitura] = useState('Prefeitura Municipal');
-  const [municipio] = useState('');
-  const [estado] = useState('Minas Gerais');
+  const [prefeitura] = useState("Prefeitura Municipal");
+  const [municipio] = useState("");
+  const [estado] = useState("Minas Gerais");
 
-  const [erroNome, setErroNome] = useState('');
-  const [erroEmail, setErroEmail] = useState('');
+  const [erroNome, setErroNome] = useState("");
+  const [erroEmail, setErroEmail] = useState("");
   const [enviando, setEnviando] = useState(false);
 
   // VALIDAR NOME COMPLETO
   function validarNome(valor: string): string {
-    const nomeLimpo = valor.trim().replace(/\s+/g, ' ');
+    const nomeLimpo = valor.trim().replace(/\s+/g, " ");
 
     if (!nomeLimpo) {
-      return 'Informe seu nome completo.';
+      return "Informe seu nome completo.";
     }
 
-    const partes = nomeLimpo.split(' ');
+    const partes = nomeLimpo.split(" ");
 
     if (partes.length < 2) {
-      return 'Informe seu nome e sobrenome.';
+      return "Informe seu nome e sobrenome.";
     }
 
-    const nomeValido =
-      /^[A-Za-zÀ-ÖØ-öø-ÿ]+(?:[ '-][A-Za-zÀ-ÖØ-öø-ÿ]+)*$/.test(
-        nomeLimpo
-      );
+    const nomeValido = /^[A-Za-zÀ-ÖØ-öø-ÿ]+(?:[ '-][A-Za-zÀ-ÖØ-öø-ÿ]+)*$/.test(
+      nomeLimpo,
+    );
 
     if (!nomeValido) {
-      return 'Digite um nome válido, sem números ou símbolos.';
+      return "Digite um nome válido, sem números ou símbolos.";
     }
 
     if (partes.some((parte) => parte.length < 2)) {
-      return 'Confira o nome informado.';
+      return "Confira o nome informado.";
     }
 
-    return '';
+    return "";
   }
 
   // VALIDAR E-MAIL
@@ -64,17 +62,16 @@ export default function EditarPerfil() {
     const emailLimpo = valor.trim();
 
     if (!emailLimpo) {
-      return 'Informe seu e-mail institucional.';
+      return "Informe seu e-mail institucional.";
     }
 
-    const emailValido =
-      /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emailLimpo);
+    const emailValido = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emailLimpo);
 
     if (!emailValido || emailLimpo.length > 254) {
-      return 'Digite um endereço de e-mail válido.';
+      return "Digite um endereço de e-mail válido.";
     }
 
-    return '';
+    return "";
   }
 
   // SALVAR E ABRIR A SEGUNDA TELA
@@ -91,46 +88,43 @@ export default function EditarPerfil() {
 
     if (nomeInvalido || emailInvalido) {
       Alert.alert(
-        'Dados inválidos',
-        'Verifique os campos destacados antes de continuar.'
+        "Dados inválidos",
+        "Verifique os campos destacados antes de continuar.",
       );
       return;
     }
 
     setEnviando(true);
 
-    router.replace('/alteracoes-salvas');
+    router.replace("/alteracoes-salvas");
   }
 
   // CANCELAR
   function cancelar() {
     Alert.alert(
-      'Cancelar alterações',
-      'Deseja sair sem salvar as alterações?',
+      "Cancelar alterações",
+      "Deseja sair sem salvar as alterações?",
       [
         {
-          text: 'Continuar editando',
-          style: 'cancel',
+          text: "Continuar editando",
+          style: "cancel",
         },
         {
-          text: 'Cancelar',
-          style: 'destructive',
+          text: "Cancelar",
+          style: "destructive",
           onPress: () => router.back(),
         },
-      ]
+      ],
     );
   }
 
   return (
     <View style={styles.container}>
-      <StatusBar
-        barStyle="dark-content"
-        backgroundColor="#F4F7FC"
-      />
+      <StatusBar barStyle="dark-content" />
 
       <KeyboardAvoidingView
         style={styles.keyboard}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
@@ -148,31 +142,22 @@ export default function EditarPerfil() {
               <Text style={styles.backArrow}>‹</Text>
             </TouchableOpacity>
 
-            <Text style={styles.title}>
-              Editar perfil
-            </Text>
+            <Text style={styles.title}>Editar perfil</Text>
 
-            <Text style={styles.subtitle}>
-              Atualize seus dados cadastrais.
-            </Text>
+            <Text style={styles.subtitle}>Atualize seus dados cadastrais.</Text>
           </View>
 
           {/* NOME COMPLETO */}
 
           <View style={styles.field}>
-            <Text style={styles.label}>
-              Nome completo
-            </Text>
+            <Text style={styles.label}>Nome completo</Text>
 
             <TextInput
-              style={[
-                styles.input,
-                erroNome ? styles.inputError : null,
-              ]}
+              style={[styles.input, erroNome ? styles.inputError : null]}
               value={nome}
               onChangeText={(valor) => {
                 setNome(valor);
-                setErroNome('');
+                setErroNome("");
               }}
               onBlur={() => setErroNome(validarNome(nome))}
               placeholder="Nome completo"
@@ -182,10 +167,8 @@ export default function EditarPerfil() {
               maxLength={100}
             />
 
-            {erroNome !== '' && (
-              <Text style={styles.errorText}>
-                {erroNome}
-              </Text>
+            {erroNome !== "" && (
+              <Text style={styles.errorText}>{erroNome}</Text>
             )}
           </View>
 
@@ -193,24 +176,17 @@ export default function EditarPerfil() {
 
           <View style={styles.field}>
             <View style={styles.emailHeader}>
-              <Text style={styles.label}>
-                E-mail institucional
-              </Text>
+              <Text style={styles.label}>E-mail institucional</Text>
 
-              <Text style={styles.approval}>
-                Alteração sujeita à aprovação
-              </Text>
+              <Text style={styles.approval}>Alteração sujeita à aprovação</Text>
             </View>
 
             <TextInput
-              style={[
-                styles.input,
-                erroEmail ? styles.inputError : null,
-              ]}
+              style={[styles.input, erroEmail ? styles.inputError : null]}
               value={email}
               onChangeText={(valor) => {
                 setEmail(valor);
-                setErroEmail('');
+                setErroEmail("");
               }}
               onBlur={() => setErroEmail(validarEmail(email))}
               placeholder="seu@email.com"
@@ -221,10 +197,8 @@ export default function EditarPerfil() {
               maxLength={254}
             />
 
-            {erroEmail !== '' && (
-              <Text style={styles.errorText}>
-                {erroEmail}
-              </Text>
+            {erroEmail !== "" && (
+              <Text style={styles.errorText}>{erroEmail}</Text>
             )}
           </View>
 
@@ -274,17 +248,12 @@ export default function EditarPerfil() {
 
           <View style={styles.buttons}>
             <TouchableOpacity
-              style={[
-                styles.saveButton,
-                enviando && styles.buttonDisabled,
-              ]}
+              style={[styles.saveButton, enviando && styles.buttonDisabled]}
               onPress={salvarAlteracoes}
               disabled={enviando}
               activeOpacity={0.85}
             >
-              <Text style={styles.saveText}>
-                Salvar alterações
-              </Text>
+              <Text style={styles.saveText}>Salvar alterações</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -292,9 +261,7 @@ export default function EditarPerfil() {
               onPress={cancelar}
               activeOpacity={0.85}
             >
-              <Text style={styles.cancelText}>
-                Cancelar
-              </Text>
+              <Text style={styles.cancelText}>Cancelar</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -308,7 +275,7 @@ export default function EditarPerfil() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F4F7FC',
+    backgroundColor: "#F4F7FC",
   },
 
   keyboard: {
@@ -329,28 +296,28 @@ const styles = StyleSheet.create({
   backButton: {
     width: 30,
     height: 32,
-    justifyContent: 'center',
+    justifyContent: "center",
     marginBottom: 7,
   },
 
   backArrow: {
     fontSize: 35,
     lineHeight: 35,
-    color: '#142B49',
-    fontWeight: '300',
+    color: "#142B49",
+    fontWeight: "300",
     marginTop: -5,
   },
 
   title: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#172B46',
+    fontWeight: "600",
+    color: "#172B46",
     marginBottom: 5,
   },
 
   subtitle: {
     fontSize: 12,
-    color: '#63758E',
+    color: "#63758E",
   },
 
   field: {
@@ -359,50 +326,50 @@ const styles = StyleSheet.create({
 
   label: {
     fontSize: 13,
-    color: '#172B46',
+    color: "#172B46",
     marginBottom: 4,
-    fontWeight: '400',
+    fontWeight: "400",
   },
 
   emailHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
 
   approval: {
     fontSize: 9,
-    color: '#263C59',
+    color: "#263C59",
     marginBottom: 4,
   },
 
   input: {
     height: 43,
     borderWidth: 1,
-    borderColor: '#71839D',
+    borderColor: "#71839D",
     borderRadius: 11,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     paddingHorizontal: 13,
     fontSize: 12,
-    color: '#536985',
+    color: "#536985",
   },
 
   disabledInput: {
     height: 43,
     borderRadius: 11,
-    backgroundColor: '#E4E9F0',
+    backgroundColor: "#E4E9F0",
     paddingHorizontal: 13,
     fontSize: 12,
-    color: '#71839D',
+    color: "#71839D",
   },
 
   inputError: {
-    borderColor: '#D64545',
+    borderColor: "#D64545",
   },
 
   errorText: {
     fontSize: 11,
-    color: '#D64545',
+    color: "#D64545",
     marginTop: 5,
     marginLeft: 2,
   },
@@ -414,10 +381,10 @@ const styles = StyleSheet.create({
 
   saveButton: {
     height: 43,
-    backgroundColor: '#10558E',
+    backgroundColor: "#10558E",
     borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   buttonDisabled: {
@@ -425,24 +392,24 @@ const styles = StyleSheet.create({
   },
 
   saveText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
   },
 
   cancelButton: {
     height: 43,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: '#71839D',
+    borderColor: "#71839D",
     borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   cancelText: {
-    color: '#455A76',
+    color: "#455A76",
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
   },
 });
