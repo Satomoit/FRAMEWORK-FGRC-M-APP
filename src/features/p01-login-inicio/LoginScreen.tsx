@@ -14,9 +14,15 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { usePreferencias } from '@/features/p11-configuracoes/PreferenciasProvider';
 import { supabase } from '@/lib/supabase';
 
 export default function LoginScreen() {
+  const {
+    preferencias,
+    carregando: carregandoPreferencias,
+  } = usePreferencias();
+
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [mensagem, setMensagem] = useState('');
@@ -24,6 +30,35 @@ export default function LoginScreen() {
 
   const senhaRef = useRef<ComponentRef<typeof TextInput>>(null);
   const enviandoRef = useRef(false);
+
+  const escuro = preferencias.tema === 'escuro';
+  const contraste = preferencias.altoContraste;
+
+  const escala =
+    preferencias.tamanhoFonte === 'pequena'
+      ? 0.9
+      : preferencias.tamanhoFonte === 'grande'
+        ? 1.2
+        : 1;
+
+  const cores = {
+    fundo: contraste
+      ? escuro ? '#000000' : '#FFFFFF'
+      : escuro ? '#101827' : '#F5F8FC',
+    campo: escuro ? '#182438' : '#FFFFFF',
+    texto: escuro ? '#FFFFFF' : contraste ? '#000000' : '#17263E',
+    secundario: escuro
+      ? contraste ? '#FFFFFF' : '#C5D1E2'
+      : contraste ? '#000000' : '#465B76',
+    borda: contraste
+      ? escuro ? '#FFFFFF' : '#000000'
+      : escuro ? '#8293AC' : '#52647C',
+    botao: escuro ? '#9DD3FF' : '#11558B',
+    textoBotao: escuro ? '#000000' : '#FFFFFF',
+    aviso: escuro ? '#182438' : '#E6EDF5',
+  };
+
+  const styles = criarEstilos(cores, escala);
 
   async function entrar() {
     if (enviandoRef.current) return;
@@ -84,6 +119,18 @@ export default function LoginScreen() {
     }
   }
 
+  if (carregandoPreferencias) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator
+          size="large"
+          color={cores.botao}
+          accessibilityLabel="Carregando preferências"
+        />
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
@@ -126,7 +173,8 @@ export default function LoginScreen() {
                 accessibilityLabel="E-mail institucional"
                 style={styles.input}
                 placeholder="Digite seu e-mail..."
-                placeholderTextColor="#52647C"
+                placeholderTextColor={cores.secundario}
+                selectionColor={cores.botao}
                 value={email}
                 onChangeText={(value) => {
                   setEmail(value);
@@ -150,7 +198,8 @@ export default function LoginScreen() {
                 accessibilityLabel="Senha"
                 style={styles.input}
                 placeholder="Digite sua senha..."
-                placeholderTextColor="#52647C"
+                placeholderTextColor={cores.secundario}
+                selectionColor={cores.botao}
                 value={senha}
                 onChangeText={(value) => {
                   setSenha(value);
@@ -201,14 +250,13 @@ export default function LoginScreen() {
                 (pressed || carregando) && styles.pressed,
               ]}
             >
-              {carregando ? (
-                <View style={styles.loadingRow}>
-                  <ActivityIndicator color="#FFFFFF" />
-                  <Text style={styles.loginButtonText}>Entrando...</Text>
-                </View>
-              ) : (
-                <Text style={styles.loginButtonText}>Entrar</Text>
+              {carregando && (
+                <ActivityIndicator color={cores.textoBotao} />
               )}
+
+              <Text style={styles.loginButtonText}>
+                {carregando ? 'Entrando...' : 'Entrar'}
+              </Text>
             </Pressable>
 
             <View style={styles.registerRow}>
@@ -236,134 +284,160 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F5F8FC',
-  },
-  scrollContent: {
-    flexGrow: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 26,
-    paddingVertical: 36,
-  },
-  content: {
-    width: '100%',
-    maxWidth: 420,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 54,
-  },
-  logo: {
-    width: 74,
-    height: 74,
-    marginBottom: 6,
-  },
-  brand: {
-    color: '#17263E',
-    fontSize: 30,
-    fontWeight: '700',
-  },
-  subtitle: {
-    color: '#465B76',
-    fontSize: 14,
-    textAlign: 'center',
-    marginTop: 4,
-    lineHeight: 21,
-  },
-  welcome: {
-    marginBottom: 36,
-  },
-  title: {
-    color: '#17263E',
-    fontSize: 27,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  description: {
-    color: '#465B76',
-    fontSize: 14,
-    lineHeight: 21,
-  },
-  field: {
-    marginBottom: 22,
-  },
-  label: {
-    color: '#17263E',
-    fontSize: 15,
-    marginBottom: 7,
-  },
-  input: {
-    minHeight: 56,
-    borderWidth: 1,
-    borderColor: '#52647C',
-    borderRadius: 13,
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    color: '#17263E',
-    fontSize: 14,
-  },
-  forgotButton: {
-    alignSelf: 'flex-end',
-    minHeight: 44,
-    justifyContent: 'center',
-    marginTop: -20,
-    marginBottom: 14,
-  },
-  link: {
-    color: '#465B76',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  message: {
-    color: '#17263E',
-    backgroundColor: '#E6EDF5',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  loginButton: {
-    backgroundColor: '#11558B',
-    minHeight: 56,
-    borderRadius: 13,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pressed: {
-    opacity: 0.8,
-  },
-  loadingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  loginButtonText: {
-    color: '#FFFFFF',
-    fontSize: 17,
-    fontWeight: '600',
-  },
-  registerRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    justifyContent: 'center',
-    columnGap: 6,
-    marginTop: 12,
-  },
-  registerText: {
-    color: '#17263E',
-    fontSize: 14,
-  },
-  registerButton: {
-    minHeight: 44,
-    justifyContent: 'center',
-  },
-});
+type Cores = {
+  fundo: string;
+  campo: string;
+  texto: string;
+  secundario: string;
+  borda: string;
+  botao: string;
+  textoBotao: string;
+  aviso: string;
+};
+
+function criarEstilos(cores: Cores, escala: number) {
+  return StyleSheet.create({
+    flex: {
+      flex: 1,
+    },
+    safeArea: {
+      flex: 1,
+      backgroundColor: cores.fundo,
+    },
+    loading: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: cores.fundo,
+    },
+    scrollContent: {
+      flexGrow: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 26,
+      paddingVertical: 36,
+    },
+    content: {
+      width: '100%',
+      maxWidth: 420,
+    },
+    header: {
+      alignItems: 'center',
+      marginBottom: 54,
+    },
+    logo: {
+      width: 74,
+      height: 74,
+      marginBottom: 6,
+    },
+    brand: {
+      color: cores.texto,
+      fontSize: 30 * escala,
+      fontWeight: '700',
+      textAlign: 'center',
+    },
+    subtitle: {
+      color: cores.secundario,
+      fontSize: 14 * escala,
+      textAlign: 'center',
+      marginTop: 4,
+      lineHeight: 21 * escala,
+    },
+    welcome: {
+      marginBottom: 36,
+    },
+    title: {
+      color: cores.texto,
+      fontSize: 27 * escala,
+      fontWeight: '600',
+      marginBottom: 4,
+    },
+    description: {
+      color: cores.secundario,
+      fontSize: 14 * escala,
+      lineHeight: 21 * escala,
+    },
+    field: {
+      marginBottom: 22,
+    },
+    label: {
+      color: cores.texto,
+      fontSize: 15 * escala,
+      marginBottom: 7,
+    },
+    input: {
+      minHeight: 56,
+      borderWidth: 1,
+      borderColor: cores.borda,
+      borderRadius: 13,
+      backgroundColor: cores.campo,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      color: cores.texto,
+      fontSize: 14 * escala,
+    },
+    forgotButton: {
+      alignSelf: 'flex-end',
+      minHeight: 44,
+      justifyContent: 'center',
+      marginTop: -20,
+      marginBottom: 14,
+    },
+    link: {
+      color: cores.secundario,
+      fontSize: 14 * escala,
+      lineHeight: 21 * escala,
+      fontWeight: '600',
+    },
+    message: {
+      color: cores.texto,
+      backgroundColor: cores.aviso,
+      borderWidth: 1,
+      borderColor: cores.borda,
+      padding: 12,
+      borderRadius: 8,
+      marginBottom: 16,
+      fontSize: 14 * escala,
+      lineHeight: 21 * escala,
+    },
+    loginButton: {
+      backgroundColor: cores.botao,
+      minHeight: 56,
+      borderRadius: 13,
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+    },
+    pressed: {
+      opacity: 0.8,
+    },
+    loginButtonText: {
+      color: cores.textoBotao,
+      fontSize: 17 * escala,
+      fontWeight: '600',
+      textAlign: 'center',
+      flexShrink: 1,
+    },
+    registerRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      alignItems: 'center',
+      justifyContent: 'center',
+      columnGap: 6,
+      marginTop: 12,
+    },
+    registerText: {
+      color: cores.texto,
+      fontSize: 14 * escala,
+      lineHeight: 21 * escala,
+    },
+    registerButton: {
+      minHeight: 44,
+      justifyContent: 'center',
+    },
+  });
+}
