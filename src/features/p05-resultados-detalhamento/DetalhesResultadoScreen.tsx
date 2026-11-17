@@ -4,17 +4,16 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { ClassificationBadge } from './components/ClassificationBadge';
 import { ProgressBar } from './components/ProgressBar';
-import { results } from './mockData';
 import { colors, radius } from './theme';
 import { AssessmentResult } from './types';
 
 interface Props {
-  result?: AssessmentResult;
+  result: AssessmentResult;
   onBack?: () => void;
   onOpenReport?: (result: AssessmentResult) => void;
 }
 
-export function DetalhesResultadoScreen({ result = results[0], onBack, onOpenReport }: Props) {
+export function DetalhesResultadoScreen({ result, onBack, onOpenReport }: Props) {
   const [showAll, setShowAll] = useState(false);
   const dimensions = showAll ? result.dimensions : result.dimensions.slice(0, 3);
 

@@ -19,7 +19,7 @@ function bar(value: number, color: string) {
   return `<div class="track"><div class="fill" style="width:${clamp(value)}%;background:${color}"></div></div>`;
 }
 
-function buildHtml(report: Report, recs: Recommendation[]): string {
+export function buildHtml(report: Report, recs: Recommendation[]): string {
   const dimensions = (report.dimensions ?? [])
     .map(
       (d) => `
@@ -52,6 +52,17 @@ function buildHtml(report: Report, recs: Recommendation[]): string {
     )
     .join('');
 
+  // aqui entra a lista completa das perguntas respondidas, inclusive nota 4
+  const answers = (report.answers ?? []).map((r, indice) => `
+    <article class="answer">
+      <h3>${indice + 1}. ${escape(r.codigo)} — ${escape(r.eixo)}</h3>
+      <p><b>Pergunta:</b> ${escape(r.pergunta)}</p>
+      <p><b>Resposta:</b> ${r.valor}/4 — ${escape(r.alternativa)}. ${escape(r.descricao)}</p>
+      <p class="ref"><b>Referência:</b> ${escape(r.nist)}</p>
+      ${r.recomendacao ? `<p><b>Recomendação:</b> ${escape(r.recomendacao)}</p>` : '<p>Nível aprimorado: sem recomendação corretiva cadastrada para esta resposta.</p>'}
+    </article>
+  `).join('');
+
   return `<!doctype html><html><head><meta charset="utf-8" />
   <style>
     * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -73,6 +84,10 @@ function buildHtml(report: Report, recs: Recommendation[]): string {
     .mid { background: #D5CBC0; color: #B7791F; }
     .high { background: #D8C3BE; color: #B42318; }
     .ref { color: #4A5568; font-size: 13px; }
+    .answer { padding: 10px 0; margin-bottom: 12px; border-bottom: 1px solid #D9DEE5; page-break-inside: avoid; }
+    .answer h3 { margin-bottom: 7px; color: #0B4F8A; }
+    .answer p { margin: 6px 0; line-height: 1.4; }
+    @page { size: A4; margin: 16mm; }
   </style></head><body>
     <h1>FGRC-M — Relatório de avaliação</h1>
     <div class="meta">Avaliação de ${escape(report.date)} • ${escape(report.index)}</div>
@@ -87,11 +102,16 @@ function buildHtml(report: Report, recs: Recommendation[]): string {
     ${dimensions ? `<h2>Resultados por dimensão</h2><div class="box">${dimensions}</div>` : ''}
     ${points ? `<h2>Pontos de atenção</h2><div class="box">${points}</div>` : ''}
 
-    <h2>Recomendações</h2>${items}
+    <p class="meta">Método deste MVP: índice de exposição = 100 - (média das respostas / 4 × 100). Faixas provisórias: 0–33 baixo, 34–66 intermediário e 67–100 alto; validar com o orientador.</p>
+    <h2>Respostas completas (${report.answers?.length ?? 0})</h2>
+    ${answers}
+    <h2>Recomendações prioritárias</h2>${items || '<p>Não há recomendações corretivas cadastradas para estas respostas.</p>'}
   </body></html>`;
 }
 
 export async function generateReportPdf(report: Report, recs: Recommendation[]) {
+  // não exportamos uma lista vazia ou um resultado de exemplo no lugar de uma avaliação real
+  if (!report.answers?.length) throw new Error('Não há respostas registradas para gerar o PDF');
   const { uri } = await Print.printToFileAsync({ html: buildHtml(report, recs) });
   if (await Sharing.isAvailableAsync()) {
     await Sharing.shareAsync(uri, {

@@ -2,22 +2,23 @@
 import React, { useState } from 'react';
 import { Alert, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { recommendations, reports } from './mockData';
 import { generateReportPdf } from './pdf';
 import { colors, radius } from './theme';
 import { Report } from './types';
 
 interface Props {
+  reports: Report[];
+  recommendationsFor: (report: Report) => import('./types').Recommendation[];
   onOpenReport?: (report: Report) => void;
 }
 
-export function RelatoriosScreen({ onOpenReport }: Props) {
+export function RelatoriosScreen({ reports, recommendationsFor, onOpenReport }: Props) {
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
   async function handlePdf(report: Report) {
     try {
       setLoadingId(report.id);
-      await generateReportPdf(report, recommendations);
+      await generateReportPdf(report, recommendationsFor(report));
     } catch {
       Alert.alert('Erro', 'Não foi possível gerar o PDF. Tente novamente.');
     } finally {
@@ -36,6 +37,8 @@ export function RelatoriosScreen({ onOpenReport }: Props) {
       <Text style={styles.title}>Relatórios</Text>
       <Text style={styles.subtitle}>Consulte e exporte os relatórios das avaliações municipais.</Text>
 
+      {/* só entram relatórios de avaliações salvas */}
+      {reports.length === 0 ? <Text style={styles.subtitle}>Nenhum relatório ainda. Finalize uma avaliação para gerar o PDF.</Text> : null}
       {reports.map((r) => (
         <View key={r.id} style={styles.card}>
           <View style={styles.row}>

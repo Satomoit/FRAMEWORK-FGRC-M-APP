@@ -1,19 +1,20 @@
-import { useFgrcTheme } from '../../components/fgrc-colors';
-import { FgrcButton, Notice, Page } from '../../components/fgrc-ui';
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { EIXOS_FGRC, TODAS_QUESTOES_FGRC } from './questionarioData';
+import { useState } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useFgrcTheme } from "../../components/fgrc-colors";
+import { FgrcButton, Notice, Page } from "../../components/fgrc-ui";
+import { EIXOS_FGRC, TODAS_QUESTOES_FGRC } from "./questionarioData";
 
 type QuestionarioScreenProps = {
   respostas: Record<string, number>;
   onResponder: (questaoId: string, valor: number) => void;
   onSalvarESair: () => void;
-  onFinalizarAvaliacao: () => void;
+  // essa função pode precisar esperar o salvamento terminar
+  onFinalizarAvaliacao: () => void | Promise<void>;
   onVoltarHome?: () => void;
   onVerResultados?: () => void;
 };
 
-type EtapaQuestionario = 'respondendo' | 'revisao' | 'finalizada';
+type EtapaQuestionario = "respondendo" | "revisao" | "finalizada";
 
 export default function QuestionarioScreen({
   respostas,
@@ -25,19 +26,29 @@ export default function QuestionarioScreen({
 }: QuestionarioScreenProps) {
   const { colors } = useFgrcTheme();
 
-  const indiceInicial = TODAS_QUESTOES_FGRC.findIndex((q) => respostas[q.id] === undefined);
-  const [indiceAtual, setIndiceAtual] = useState(indiceInicial >= 0 ? indiceInicial : 0);
-  const [etapa, setEtapa] = useState<EtapaQuestionario>('respondendo');
+  const indiceInicial = TODAS_QUESTOES_FGRC.findIndex(
+    (q) => respostas[q.id] === undefined,
+  );
+  const [indiceAtual, setIndiceAtual] = useState(
+    indiceInicial >= 0 ? indiceInicial : 0,
+  );
+  const [etapa, setEtapa] = useState<EtapaQuestionario>("respondendo");
 
   const questaoAtual = TODAS_QUESTOES_FGRC[indiceAtual];
   const respostaSelecionada = respostas[questaoAtual.id];
 
   const totalQuestoes = TODAS_QUESTOES_FGRC.length;
-  const respondidasCount = TODAS_QUESTOES_FGRC.filter((q) => respostas[q.id] !== undefined).length;
-  const pendentes = TODAS_QUESTOES_FGRC.filter((q) => respostas[q.id] === undefined);
+  const respondidasCount = TODAS_QUESTOES_FGRC.filter(
+    (q) => respostas[q.id] !== undefined,
+  ).length;
+  const pendentes = TODAS_QUESTOES_FGRC.filter(
+    (q) => respostas[q.id] === undefined,
+  );
 
   const irParaEixo = (eixoCodigo: string) => {
-    const idx = TODAS_QUESTOES_FGRC.findIndex((q) => q.eixoCodigo === eixoCodigo);
+    const idx = TODAS_QUESTOES_FGRC.findIndex(
+      (q) => q.eixoCodigo === eixoCodigo,
+    );
     if (idx >= 0) {
       setIndiceAtual(idx);
     }
@@ -47,21 +58,26 @@ export default function QuestionarioScreen({
     const idx = TODAS_QUESTOES_FGRC.findIndex((q) => q.id === questaoId);
     if (idx >= 0) {
       setIndiceAtual(idx);
-      setEtapa('respondendo');
+      setEtapa("respondendo");
     }
   };
 
-  if (etapa === 'finalizada') {
+  if (etapa === "finalizada") {
     return (
       <Page>
         <View style={styles.finalizadaContainer}>
           <View
             style={[
               styles.successCircle,
-              { backgroundColor: colors.infoBackground, borderColor: colors.success },
+              {
+                backgroundColor: colors.infoBackground,
+                borderColor: colors.success,
+              },
             ]}
           >
-            <Text style={[styles.successCheck, { color: colors.success }]}>✓</Text>
+            <Text style={[styles.successCheck, { color: colors.success }]}>
+              ✓
+            </Text>
           </View>
 
           <Text style={[styles.finalizadaTitle, { color: colors.text }]}>
@@ -74,10 +90,12 @@ export default function QuestionarioScreen({
               { backgroundColor: colors.surface, borderColor: colors.border },
             ]}
           >
-            <Text style={[styles.relatorioBoxTitle, { color: colors.text }]}>Seu relatório</Text>
+            <Text style={[styles.relatorioBoxTitle, { color: colors.text }]}>
+              Seu relatório
+            </Text>
             <Text style={[styles.relatorioBoxBody, { color: colors.muted }]}>
-              O relatório com os resultados, pontos de atenção e recomendações estará disponível
-              na aba Resultados.
+              O relatório com os resultados, pontos de atenção e recomendações
+              estará disponível na aba Resultados.
             </Text>
             <Text style={[styles.relatorioBoxHint, { color: colors.blue }]}>
               Aguarde o processamento dos resultados.
@@ -112,12 +130,12 @@ export default function QuestionarioScreen({
     );
   }
 
-  if (etapa === 'revisao') {
+  if (etapa === "revisao") {
     return (
       <Page
         title="Revisar avaliação"
         subtitle="Confira o andamento antes de finalizar."
-        onBack={() => setEtapa('respondendo')}
+        onBack={() => setEtapa("respondendo")}
       >
         <View style={styles.resumoRow}>
           <View
@@ -126,8 +144,12 @@ export default function QuestionarioScreen({
               { backgroundColor: colors.surface, borderColor: colors.border },
             ]}
           >
-            <Text style={[styles.resumoNumero, { color: colors.success }]}>{respondidasCount}</Text>
-            <Text style={[styles.resumoLabel, { color: colors.muted }]}>Respondidas</Text>
+            <Text style={[styles.resumoNumero, { color: colors.success }]}>
+              {respondidasCount}
+            </Text>
+            <Text style={[styles.resumoLabel, { color: colors.muted }]}>
+              Respondidas
+            </Text>
           </View>
 
           <View
@@ -136,8 +158,12 @@ export default function QuestionarioScreen({
               { backgroundColor: colors.surface, borderColor: colors.border },
             ]}
           >
-            <Text style={[styles.resumoNumero, { color: colors.orange }]}>{pendentes.length}</Text>
-            <Text style={[styles.resumoLabel, { color: colors.muted }]}>Pendentes</Text>
+            <Text style={[styles.resumoNumero, { color: colors.orange }]}>
+              {pendentes.length}
+            </Text>
+            <Text style={[styles.resumoLabel, { color: colors.muted }]}>
+              Pendentes
+            </Text>
           </View>
         </View>
 
@@ -160,17 +186,35 @@ export default function QuestionarioScreen({
                 <Pressable
                   key={q.id}
                   onPress={() => irParaQuestaoId(q.id)}
-                  style={[styles.pendenteItem, { borderTopColor: colors.divider }]}
+                  style={[
+                    styles.pendenteItem,
+                    { borderTopColor: colors.divider },
+                  ]}
                 >
-                  <View style={[styles.pendenteBadge, { backgroundColor: colors.infoBackground }]}>
-                    <Text style={[styles.pendenteBadgeText, { color: colors.orange }]}>
+                  <View
+                    style={[
+                      styles.pendenteBadge,
+                      { backgroundColor: colors.infoBackground },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.pendenteBadgeText,
+                        { color: colors.orange },
+                      ]}
+                    >
                       {q.codigo}
                     </Text>
                   </View>
-                  <Text style={[styles.pendenteEixo, { color: colors.text }]} numberOfLines={1}>
+                  <Text
+                    style={[styles.pendenteEixo, { color: colors.text }]}
+                    numberOfLines={1}
+                  >
                     {q.eixoNome}
                   </Text>
-                  <Text style={[styles.pendenteLink, { color: colors.blue }]}>Responder ›</Text>
+                  <Text style={[styles.pendenteLink, { color: colors.blue }]}>
+                    Responder ›
+                  </Text>
                 </Pressable>
               ))}
             </View>
@@ -190,16 +234,27 @@ export default function QuestionarioScreen({
         <View style={styles.revisaoActions}>
           <FgrcButton
             label="Finalizar avaliação"
+            // só libera o botão quando todas as questões tiverem resposta
             disabled={pendentes.length > 0}
-            onPress={() => {
-              onFinalizarAvaliacao();
-              setEtapa('finalizada');
+            onPress={async () => {
+              try {
+                // espera a função de salvar terminar antes de continuar
+                // assim não mostra que finalizou se ainda tiver salvando
+                await onFinalizarAvaliacao();
+
+                // se deu tudo certo mostra a tela de avaliação finalizada
+                setEtapa("finalizada");
+              } catch (erro) {
+                // se der algum problema não muda de tela
+                // isso ajuda a conferir o erro no terminal
+                console.error("erro ao finalizar a avaliação:", erro);
+              }
             }}
           />
           <FgrcButton
             label="Voltar às questões"
             variant="outlined"
-            onPress={() => setEtapa('respondendo')}
+            onPress={() => setEtapa("respondendo")}
           />
         </View>
       </Page>
@@ -242,7 +297,12 @@ export default function QuestionarioScreen({
 
       <View style={styles.headerMeta}>
         <View style={styles.eixoBadgeRow}>
-          <View style={[styles.eixoPill, { backgroundColor: colors.iconBackground }]}>
+          <View
+            style={[
+              styles.eixoPill,
+              { backgroundColor: colors.iconBackground },
+            ]}
+          >
             <Text style={[styles.eixoPillText, { color: colors.blue }]}>
               {questaoAtual.eixoCodigo}
             </Text>
@@ -257,13 +317,15 @@ export default function QuestionarioScreen({
             {questaoAtual.codigo}
           </Text>
           <Text style={[styles.questaoContagem, { color: colors.muted }]}>
-            Questão {questaoAtual.numeroNoEixo} de {questaoAtual.totalNoEixo} (Geral:{' '}
-            {indiceAtual + 1}/{totalQuestoes})
+            Questão {questaoAtual.numeroNoEixo} de {questaoAtual.totalNoEixo}{" "}
+            (Geral: {indiceAtual + 1}/{totalQuestoes})
           </Text>
         </View>
       </View>
 
-      <Text style={[styles.perguntaText, { color: colors.text }]}>{questaoAtual.pergunta}</Text>
+      <Text style={[styles.perguntaText, { color: colors.text }]}>
+        {questaoAtual.pergunta}
+      </Text>
 
       <View style={styles.alternativasList}>
         {questaoAtual.alternativas.map((alt) => {
@@ -277,7 +339,9 @@ export default function QuestionarioScreen({
               style={({ pressed }) => [
                 styles.alternativaCard,
                 {
-                  backgroundColor: selecionada ? colors.selected : colors.surface,
+                  backgroundColor: selecionada
+                    ? colors.selected
+                    : colors.surface,
                   borderColor: selecionada ? colors.blue : colors.border,
                   borderWidth: selecionada ? 2 : 1.25,
                   opacity: pressed ? 0.86 : 1,
@@ -289,24 +353,32 @@ export default function QuestionarioScreen({
                   style={[
                     styles.numeroBadge,
                     {
-                      backgroundColor: selecionada ? colors.blue : colors.iconBackground,
+                      backgroundColor: selecionada
+                        ? colors.blue
+                        : colors.iconBackground,
                     },
                   ]}
                 >
                   <Text
                     style={[
                       styles.numeroBadgeText,
-                      { color: selecionada ? colors.blueOnButton : colors.blue },
+                      {
+                        color: selecionada ? colors.blueOnButton : colors.blue,
+                      },
                     ]}
                   >
                     {alt.valor}
                   </Text>
                 </View>
-                <Text style={[styles.alternativaTitulo, { color: colors.text }]}>
+                <Text
+                  style={[styles.alternativaTitulo, { color: colors.text }]}
+                >
                   {alt.titulo}
                 </Text>
               </View>
-              <Text style={[styles.alternativaDescricao, { color: colors.muted }]}>
+              <Text
+                style={[styles.alternativaDescricao, { color: colors.muted }]}
+              >
                 {alt.descricao}
               </Text>
             </Pressable>
@@ -326,12 +398,14 @@ export default function QuestionarioScreen({
 
         <View style={styles.navButtonHalf}>
           <FgrcButton
-            label={indiceAtual === totalQuestoes - 1 ? 'Revisar →' : 'Próxima →'}
+            label={
+              indiceAtual === totalQuestoes - 1 ? "Revisar →" : "Próxima →"
+            }
             onPress={() => {
               if (indiceAtual < totalQuestoes - 1) {
                 setIndiceAtual((prev) => prev + 1);
               } else {
-                setEtapa('revisao');
+                setEtapa("revisao");
               }
             }}
           />
@@ -342,7 +416,7 @@ export default function QuestionarioScreen({
         <FgrcButton
           label="Revisar avaliação"
           variant="outlined"
-          onPress={() => setEtapa('revisao')}
+          onPress={() => setEtapa("revisao")}
         />
 
         <Pressable
@@ -350,7 +424,9 @@ export default function QuestionarioScreen({
           onPress={onSalvarESair}
           style={styles.salvarSairButton}
         >
-          <Text style={[styles.salvarSairText, { color: colors.muted }]}>Salvar e sair</Text>
+          <Text style={[styles.salvarSairText, { color: colors.muted }]}>
+            Salvar e sair
+          </Text>
         </Pressable>
       </View>
     </Page>
@@ -370,15 +446,15 @@ const styles = StyleSheet.create({
   },
   eixoTabText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   headerMeta: {
     marginBottom: 14,
     gap: 8,
   },
   eixoBadgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
   },
   eixoPill: {
@@ -388,29 +464,29 @@ const styles = StyleSheet.create({
   },
   eixoPillText: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   eixoTitleText: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
     flex: 1,
   },
   questaoSubRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   questaoCodigo: {
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   questaoContagem: {
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   perguntaText: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "700",
     lineHeight: 26,
     marginBottom: 18,
   },
@@ -424,31 +500,31 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   alternativaHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
   },
   numeroBadge: {
     width: 28,
     height: 28,
     borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   numeroBadgeText: {
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   alternativaTitulo: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   alternativaDescricao: {
     fontSize: 14,
     lineHeight: 20,
   },
   navButtonsRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
     marginBottom: 12,
   },
@@ -461,14 +537,14 @@ const styles = StyleSheet.create({
   },
   salvarSairButton: {
     paddingVertical: 12,
-    alignItems: 'center',
+    alignItems: "center",
   },
   salvarSairText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   resumoRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
     marginBottom: 18,
   },
@@ -477,16 +553,16 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1.25,
     padding: 16,
-    alignItems: 'center',
+    alignItems: "center",
     gap: 4,
   },
   resumoNumero: {
     fontSize: 28,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   resumoLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   pendentesCard: {
     borderRadius: 16,
@@ -496,7 +572,7 @@ const styles = StyleSheet.create({
   },
   pendentesTitle: {
     fontSize: 17,
-    fontWeight: '700',
+    fontWeight: "700",
     marginBottom: 4,
   },
   pendentesSubtitle: {
@@ -507,8 +583,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   pendenteItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
     paddingVertical: 12,
     borderTopWidth: 1,
@@ -520,23 +596,23 @@ const styles = StyleSheet.create({
   },
   pendenteBadgeText: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   pendenteEixo: {
     flex: 1,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   pendenteLink: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   revisaoActions: {
     gap: 12,
     marginTop: 8,
   },
   finalizadaContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingTop: 20,
   },
   successCircle: {
@@ -544,22 +620,22 @@ const styles = StyleSheet.create({
     height: 84,
     borderRadius: 42,
     borderWidth: 3,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 18,
   },
   successCheck: {
     fontSize: 40,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   finalizadaTitle: {
     fontSize: 26,
-    fontWeight: '800',
+    fontWeight: "800",
     marginBottom: 20,
-    textAlign: 'center',
+    textAlign: "center",
   },
   relatorioBox: {
-    width: '100%',
+    width: "100%",
     borderRadius: 16,
     borderWidth: 1.25,
     padding: 18,
@@ -568,7 +644,7 @@ const styles = StyleSheet.create({
   },
   relatorioBoxTitle: {
     fontSize: 17,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   relatorioBoxBody: {
     fontSize: 14,
@@ -576,11 +652,11 @@ const styles = StyleSheet.create({
   },
   relatorioBoxHint: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     marginTop: 4,
   },
   finalizadaActions: {
-    width: '100%',
+    width: "100%",
     gap: 12,
   },
 });

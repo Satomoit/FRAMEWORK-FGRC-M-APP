@@ -3,20 +3,22 @@ import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ClassificationBadge } from './components/ClassificationBadge';
-import { results } from './mockData';
 import { colors, radius } from './theme';
 import { AssessmentResult } from './types';
 
 interface Props {
+  results: AssessmentResult[];
   onOpenDetails?: (result: AssessmentResult) => void;
 }
 
-export function ResultadosScreen({ onOpenDetails }: Props) {
+export function ResultadosScreen({ results, onOpenDetails }: Props) {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Resultados</Text>
       <Text style={styles.subtitle}>Histórico das avaliações da prefeitura.</Text>
 
+      {/* sem avaliação finalizada, mostramos um estado vazio (nada de dados inventados) */}
+      {results.length === 0 ? <Text style={styles.subtitle}>Nenhuma avaliação concluída neste aparelho. Finalize o questionário para ver os resultados aqui.</Text> : null}
       {results.map((r) => (
         <Pressable
           key={r.id}

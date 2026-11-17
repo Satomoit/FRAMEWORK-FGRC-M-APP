@@ -2,20 +2,19 @@
 import React, { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { recommendations as mockRecs, reports } from './mockData';
 import { generateReportPdf } from './pdf';
 import { colors, radius } from './theme';
 import { Recommendation, Report } from './types';
 
 interface Props {
-  report?: Report;
-  recommendations?: Recommendation[];
+  report: Report;
+  recommendations: Recommendation[];
   onBack?: () => void;
 }
 
 export function RecomendacoesScreen({
-  report = reports[0],
-  recommendations = mockRecs,
+  report,
+  recommendations,
   onBack,
 }: Props) {
   const [loading, setLoading] = useState(false);
