@@ -46,7 +46,7 @@ Novo APK (depois dos commits): `npx eas-cli build -p android --profile preview`.
 | RNF-010 explicação dos termos | Parcial | Glossário curto nas perguntas (ex.: backup, MFA, firewall) |
 | RNF-006 sem internet | Implementado, não testado | Testar em modo avião depois do login |
 | Telas avulsas da P04 e da P10 | Sem link | `/revisar-avaliacao`, `/avaliacao-finalizada`, `/editar-perfil` e `/alteracoes-salvas` têm dados fixos. A revisão e a edição reais estão na P03 e na P09. Decidir com os autores se ficam como registro ou se saem |
-| Cores fixas em algumas telas | Visual | Login, Solicitar acesso, Solicitação enviada e o aviso da tela de Avaliações não mudam no modo escuro |
+| Cores fixas em algumas telas | Visual | Login, Solicitar acesso e Solicitação enviada não mudam no modo escuro. Resultados, Relatórios, Recomendações e o aviso de Avaliações já seguem o tema |
 | `mockData.ts` da P05 e da P06 | Sem uso | Continuam exportados no `index.ts` das pastas, mas nenhuma rota usa |
 | Consulta da situação do pedido | Limitação conhecida | Quem souber um e-mail descobre se existe pedido e em que situação (não vê nenhum outro dado). Aceito para o MVP |
 | Senha provisória | Limitação conhecida | A administração vê a senha uma vez. O app obriga a troca no primeiro acesso |

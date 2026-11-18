@@ -1,10 +1,10 @@
 // Tela 14 - Detalhes do resultado
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { ClassificationBadge } from './components/ClassificationBadge';
 import { ProgressBar } from './components/ProgressBar';
-import { colors, radius } from './theme';
+import { radius, useCoresP05, type CoresP05 } from './theme';
 import { AssessmentResult } from './types';
 
 interface Props {
@@ -14,6 +14,9 @@ interface Props {
 }
 
 export function DetalhesResultadoScreen({ result, onBack, onOpenReport }: Props) {
+  // [integração] cores seguem o tema do app (claro, escuro e alto contraste das Configurações)
+  const colors = useCoresP05();
+  const styles = useMemo(() => criarEstilos(colors), [colors]);
   const [showAll, setShowAll] = useState(false);
   const dimensions = showAll ? result.dimensions : result.dimensions.slice(0, 3);
 
@@ -96,7 +99,8 @@ export function DetalhesResultadoScreen({ result, onBack, onOpenReport }: Props)
   );
 }
 
-const styles = StyleSheet.create({
+// [integração] os estilos viraram uma função pra receber as cores do tema que ta ativo
+const criarEstilos = (colors: CoresP05) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { padding: 24, paddingTop: 48, paddingBottom: 40 },
   title: { fontSize: 28, fontWeight: '800', color: colors.title, marginTop: 14 },

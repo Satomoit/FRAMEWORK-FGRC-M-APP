@@ -155,7 +155,7 @@ Preencher depois de executar. Campos do plano acadêmico: responsável, data, am
 
 ### Evidências recebidas em 18/11/2026 (manhã)
 
-Capturas enviadas pela responsável, no navegador do computador, com a conta admin `admfgrc@teste.com`. Ficam registradas aqui como evidência; a situação final de cada CT é preenchida por ela depois de repetir o cenário completo.
+Capturas e relatos enviados pela responsável (navegador do computador com a conta admin `admfgrc@teste.com`, e o celular Android dela). Ficam registradas aqui como evidência; a situação final de cada CT é preenchida por ela depois de repetir o cenário completo.
 
 | Cenário | O que a captura mostra | Parte do resultado esperado coberta |
 |---|---|---|
@@ -163,5 +163,9 @@ Capturas enviadas pela responsável, no navegador do computador, com a conta adm
 | CT25 | Pedido "Aprovada" com Decidido por `admfgrc@teste.com`, Decidido em 18/11/2026 às 08:13, Enviado pelo navegador e histórico "Pendente → Aprovada" | Quem decidiu, quando e histórico |
 | CT33 (início) | Aba Segurança com QR code e chave para o aplicativo autenticador | Etapas 1 e 2 (cadastro não concluído na captura) |
 | Aprovar por e-mail sem SMTP | Mensagem "Não foi possível enviar o convite. Confira o envio de e-mail (SMTP)..." | Comportamento esperado enquanto o Gmail não está configurado |
+| Limite de e-mails (antes do Gmail) | "Limite de e-mails por hora do Supabase atingido" na área administrativa e "Muitos pedidos em pouco tempo" no Esqueci minha senha | Mensagens corretas para o limite do envio de teste do Supabase |
+| CT39 / CT12 (parcial) | Depois de configurar o Gmail `fgrcm.contato@gmail.com` no Supabase, o e-mail de recuperação chegou na caixa de entrada (ainda com o texto padrão em inglês) e o link abriu a tela Criar nova senha no navegador | E-mail entregue e link funcionando. Falta traduzir os modelos de e-mail |
+| CT15 (parcial) | Ao repetir a senha antiga em Criar nova senha, o app mostrou "A nova senha precisa ser diferente da antiga." | Validação do Supabase traduzida |
+| Instalação do APK | APK baixado e instalado no celular Android da responsável. O Play Protect avisou que o app não é verificado; com "Instalar mesmo assim" o app abriu | Instalação no celular funciona (aviso esperado para app fora da Play Store) |
 
 Observação: durante o desenvolvimento, a responsável enviou capturas do navegador com telas funcionando (Alterar senha e "Senha alterada!", validação da senha forte, PDFs gerados a partir de avaliações reais). Eram versões anteriores do código, então esses cenários não foram marcados como aprovados aqui: precisam ser repetidos na versão final.

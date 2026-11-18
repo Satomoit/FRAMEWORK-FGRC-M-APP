@@ -1,6 +1,6 @@
 // a P06 continua com as telas da Aline, mas os dados agora vêm da avaliação que vc terminou
 import { useCallback, useState } from 'react';
-import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { RelatoriosScreen } from '@/features/p06-relatorios-recomendacoes/RelatoriosScreen';
 import { RecomendacoesScreen } from '@/features/p06-relatorios-recomendacoes/RecomendacoesScreen';
@@ -9,6 +9,7 @@ import { listarAvaliacoes, type AvaliacaoRegistrada } from '@/lib/avaliacoes-rea
 import { paraRelatorio, recomendacoesDaAvaliacao } from '@/lib/calcular-relatorio';
 import { dadosDaConta, linhaDaPrefeitura } from '@/lib/conta';
 import { supabase } from '@/lib/supabase';
+import { useFgrcTheme } from '@/components/fgrc-colors';
 
 // [integração] monta "Prefeitura X - Município/UF" com os dados da conta (pro cabeçalho do PDF)
 // se a conta não tiver esses dados, volta null e o PDF só não mostra essa linha
@@ -30,6 +31,9 @@ function comPrefeitura(avaliacao: AvaliacaoRegistrada, daConta: string | null): 
 
 export default function RelatoriosRevisao() {
   const { avaliacaoId } = useLocalSearchParams<{ avaliacaoId?: string }>();
+  const router = useRouter();
+  // [integração] cores do tema pro fundo e pra mensagem de erro (modo escuro também)
+  const { colors } = useFgrcTheme();
   const [registros, setRegistros] = useState<AvaliacaoRegistrada[]>([]);
   const [selecionado, setSelecionado] = useState<Report | null>(null);
   const [carregando, setCarregando] = useState(true);
@@ -60,9 +64,9 @@ export default function RelatoriosRevisao() {
     return registro ? recomendacoesDaAvaliacao(registro) : [];
   };
 
-  if (carregando) return <ActivityIndicator size="large" style={styles.raiz} />;
-  return <View style={styles.raiz}>
-    {erro ? <Text style={styles.erro}>{erro}</Text> : null}
+  if (carregando) return <ActivityIndicator size="large" color={colors.blue} style={[styles.raiz, { backgroundColor: colors.background }]} />;
+  return <View style={[styles.raiz, { backgroundColor: colors.background }]}>
+    {erro ? <Text style={[styles.erro, { color: colors.error }]}>{erro}</Text> : null}
     {selecionado ? (
       <RecomendacoesScreen
         report={selecionado}
@@ -74,6 +78,8 @@ export default function RelatoriosRevisao() {
         reports={registros.map(r => comPrefeitura(r, prefeitura))}
         recommendationsFor={paraRecomendacoes}
         onOpenReport={setSelecionado}
+        // [integração] sem relatório ainda: botão "Fazer uma avaliação" leva pra aba Avaliações
+        onStartAssessment={() => router.push('/avaliacoes' as Href)}
       />
     )}
   </View>;

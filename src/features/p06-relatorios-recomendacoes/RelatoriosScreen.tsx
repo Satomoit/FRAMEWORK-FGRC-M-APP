@@ -1,18 +1,24 @@
 // Tela 15 - Relatórios
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Alert, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { generateReportPdf } from './pdf';
-import { colors, radius } from './theme';
+import { FgrcButton } from '@/components/fgrc-ui';
+import { radius, useCoresP06, type CoresP06 } from './theme';
 import { Report } from './types';
 
 interface Props {
   reports: Report[];
   recommendationsFor: (report: Report) => import('./types').Recommendation[];
   onOpenReport?: (report: Report) => void;
+  // [integração] sem relatório ainda, o botão leva pra tela de Avaliações
+  onStartAssessment?: () => void;
 }
 
-export function RelatoriosScreen({ reports, recommendationsFor, onOpenReport }: Props) {
+export function RelatoriosScreen({ reports, recommendationsFor, onOpenReport, onStartAssessment }: Props) {
+  // [integração] cores seguem o tema do app (claro, escuro e alto contraste das Configurações)
+  const colors = useCoresP06();
+  const styles = useMemo(() => criarEstilos(colors), [colors]);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   // [integração] aviso que aparece na própria tela (o Alert não aparece no navegador)
   const [aviso, setAviso] = useState('');
@@ -66,6 +72,8 @@ export function RelatoriosScreen({ reports, recommendationsFor, onOpenReport }: 
 
       {/* só entram relatórios de avaliações salvas */}
       {reports.length === 0 ? <Text style={styles.subtitle}>Nenhum relatório ainda. Finalize uma avaliação para gerar o PDF.</Text> : null}
+      {/* [integração] atalho pra começar (ou continuar) a avaliação que vai gerar o relatório */}
+      {reports.length === 0 && onStartAssessment ? <FgrcButton label="Fazer uma avaliação" onPress={onStartAssessment} /> : null}
       {reports.map((r) => (
         <View key={r.id} style={styles.card}>
           <View style={styles.row}>
@@ -81,7 +89,7 @@ export function RelatoriosScreen({ reports, recommendationsFor, onOpenReport }: 
           <View style={styles.divider} />
 
           <Pressable style={styles.row} onPress={() => onOpenReport?.(r)} accessibilityRole="button">
-            <Text style={styles.link}>Vizualizar relatório</Text>
+            <Text style={styles.link}>Visualizar relatório</Text>
             <Ionicons name="chevron-forward" size={22} color={colors.primary} />
           </Pressable>
 
@@ -106,7 +114,8 @@ export function RelatoriosScreen({ reports, recommendationsFor, onOpenReport }: 
   );
 }
 
-const styles = StyleSheet.create({
+// [integração] os estilos viraram uma função pra receber as cores do tema que ta ativo
+const criarEstilos = (colors: CoresP06) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { padding: 24, paddingTop: 56 },
   title: { fontSize: 30, fontWeight: '800', color: colors.title },

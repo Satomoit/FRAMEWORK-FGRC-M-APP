@@ -8,9 +8,12 @@ import type { AssessmentResult } from '@/features/p05-resultados-detalhamento/ty
 import { listarAvaliacoes } from '@/lib/avaliacoes-reais';
 import { paraResultado } from '@/lib/calcular-relatorio';
 import { trazerDadosAntigosParaConta, verificarDadosAntigos } from '@/lib/armazenamento-local';
+import { useFgrcTheme } from '@/components/fgrc-colors';
 
 export default function ResultadosRevisao() {
   const router = useRouter();
+  // [integração] cores do tema (antes o aviso e o erro eram sempre claros, até no modo escuro)
+  const { colors } = useFgrcTheme();
   const [resultados, setResultados] = useState<AssessmentResult[]>([]);
   const [selecionado, setSelecionado] = useState<AssessmentResult | null>(null);
   const [carregando, setCarregando] = useState(true);
@@ -48,18 +51,18 @@ export default function ResultadosRevisao() {
     }
   }
 
-  if (carregando) return <ActivityIndicator size="large" style={styles.raiz} />;
-  return <View style={styles.raiz}>
-    {erro ? <Text style={styles.erro}>{erro}</Text> : null}
+  if (carregando) return <ActivityIndicator size="large" color={colors.blue} style={[styles.raiz, { backgroundColor: colors.background }]} />;
+  return <View style={[styles.raiz, { backgroundColor: colors.background }]}>
+    {erro ? <Text style={[styles.erro, { color: colors.error }]}>{erro}</Text> : null}
     {/* [integração] só aparece se tiver avaliação de antes da separação por conta neste aparelho */}
     {antigas > 0 && !selecionado ? (
-      <View style={styles.antigas}>
-        <Text style={styles.antigasTexto}>
+      <View style={[styles.antigas, { backgroundColor: colors.infoBackground }]}>
+        <Text style={[styles.antigasTexto, { color: colors.text }]}>
           Encontramos {antigas} {antigas === 1 ? 'avaliação feita' : 'avaliações feitas'} neste aparelho antes da separação por conta.
           Se foi você quem fez, toque abaixo para trazer para a sua conta.
         </Text>
         <Pressable accessibilityRole="button" disabled={trazendo} onPress={() => { void trazerAntigas(); }}>
-          <Text style={styles.antigasBotao}>{trazendo ? 'Trazendo...' : 'Trazer para a minha conta'}</Text>
+          <Text style={[styles.antigasBotao, { color: colors.blue }]}>{trazendo ? 'Trazendo...' : 'Trazer para a minha conta'}</Text>
         </Pressable>
       </View>
     ) : null}
@@ -69,7 +72,14 @@ export default function ResultadosRevisao() {
         onBack={() => setSelecionado(null)}
         onOpenReport={(item) => router.push(`/relatorios-revisao?avaliacaoId=${encodeURIComponent(item.id)}` as Href)}
       />
-    ) : <ResultadosScreen results={resultados} onOpenDetails={setSelecionado} />}
+    ) : (
+      <ResultadosScreen
+        results={resultados}
+        onOpenDetails={setSelecionado}
+        // [integração] sem resultado ainda: botão "Fazer uma avaliação" leva pra aba Avaliações
+        onStartAssessment={() => router.push('/avaliacoes' as Href)}
+      />
+    )}
   </View>;
 }
 const styles = StyleSheet.create({

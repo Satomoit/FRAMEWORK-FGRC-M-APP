@@ -1,9 +1,9 @@
 // Tela 16 - Recomendações
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { generateReportPdf } from './pdf';
-import { colors, radius } from './theme';
+import { radius, useCoresP06, type CoresP06 } from './theme';
 import { Recommendation, Report } from './types';
 
 interface Props {
@@ -17,6 +17,9 @@ export function RecomendacoesScreen({
   recommendations,
   onBack,
 }: Props) {
+  // [integração] cores seguem o tema do app (claro, escuro e alto contraste das Configurações)
+  const colors = useCoresP06();
+  const styles = useMemo(() => criarEstilos(colors), [colors]);
   const [loading, setLoading] = useState(false);
 
   async function handlePdf() {
@@ -89,7 +92,8 @@ export function RecomendacoesScreen({
   );
 }
 
-const styles = StyleSheet.create({
+// [integração] os estilos viraram uma função pra receber as cores do tema que ta ativo
+const criarEstilos = (colors: CoresP06) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { padding: 24, paddingTop: 48, paddingBottom: 40 },
   title: { fontSize: 28, fontWeight: '800', color: colors.title, marginTop: 14 },

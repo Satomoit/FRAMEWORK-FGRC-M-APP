@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
+import { useFgrcTheme } from '@/components/fgrc-colors';
 import AvaliacoesScreen from '@/features/p03-avaliacoes-questionario/AvaliacoesScreen';
 import QuestionarioScreen from '@/features/p03-avaliacoes-questionario/QuestionarioScreen';
 import { finalizarAvaliacao } from '@/lib/avaliacoes-reais';
@@ -15,6 +16,8 @@ import { lerRascunho, limparRascunho, salvarRascunho, type Respostas } from '@/l
 
 export default function Avaliacoes() {
   const router = useRouter();
+  // [integração] cores do tema (o aviso de cima era sempre claro, até no modo escuro)
+  const { colors } = useFgrcTheme();
   const [tela, setTela] = useState<'lista' | 'questionario'>('lista');
   const [respostas, setRespostas] = useState<Respostas>({});
   const [carregando, setCarregando] = useState(true);
@@ -44,15 +47,15 @@ export default function Avaliacoes() {
   }, [respostas, carregando]);
 
   if (carregando) {
-    return <View style={styles.carregando}><ActivityIndicator size="large" /></View>;
+    return <View style={[styles.carregando, { backgroundColor: colors.background }]}><ActivityIndicator size="large" color={colors.blue} /></View>;
   }
 
   return (
-    <View style={styles.raiz}>
-      <Text style={styles.aviso}>
+    <View style={[styles.raiz, { backgroundColor: colors.background }]}>
+      <Text style={[styles.aviso, { backgroundColor: colors.infoBackground, color: colors.text }]}>
 Avaliação em andamento: as respostas são salvas neste aparelho; ao finalizar, os resultados e o PDF serão calculados a partir delas
       </Text>
-      {aviso ? <Text style={styles.alerta}>{aviso}</Text> : null}
+      {aviso ? <Text style={[styles.alerta, { color: colors.error }]}>{aviso}</Text> : null}
       {tela === 'lista' ? (
         <AvaliacoesScreen
           respostas={respostas}

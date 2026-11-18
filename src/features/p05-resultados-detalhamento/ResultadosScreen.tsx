@@ -1,17 +1,23 @@
 // Tela 13 - Resultados (histórico das avaliações)
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ClassificationBadge } from './components/ClassificationBadge';
-import { colors, radius } from './theme';
+import { FgrcButton } from '@/components/fgrc-ui';
+import { radius, useCoresP05, type CoresP05 } from './theme';
 import { AssessmentResult } from './types';
 
 interface Props {
   results: AssessmentResult[];
   onOpenDetails?: (result: AssessmentResult) => void;
+  // [integração] sem avaliação ainda, o botão leva pra tela de Avaliações
+  onStartAssessment?: () => void;
 }
 
-export function ResultadosScreen({ results, onOpenDetails }: Props) {
+export function ResultadosScreen({ results, onOpenDetails, onStartAssessment }: Props) {
+  // [integração] cores seguem o tema do app (claro, escuro e alto contraste das Configurações)
+  const colors = useCoresP05();
+  const styles = useMemo(() => criarEstilos(colors), [colors]);
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Resultados</Text>
@@ -19,6 +25,8 @@ export function ResultadosScreen({ results, onOpenDetails }: Props) {
 
       {/* sem avaliação finalizada, mostramos um estado vazio (nada de dados inventados) */}
       {results.length === 0 ? <Text style={styles.subtitle}>Nenhuma avaliação concluída neste aparelho. Finalize o questionário para ver os resultados aqui.</Text> : null}
+      {/* [integração] atalho pra começar (ou continuar) a avaliação */}
+      {results.length === 0 && onStartAssessment ? <FgrcButton label="Fazer uma avaliação" onPress={onStartAssessment} /> : null}
       {results.map((r) => (
         <Pressable
           key={r.id}
@@ -52,7 +60,8 @@ export function ResultadosScreen({ results, onOpenDetails }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+// [integração] os estilos viraram uma função pra receber as cores do tema que ta ativo
+const criarEstilos = (colors: CoresP05) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { padding: 24, paddingTop: 56 },
   title: { fontSize: 30, fontWeight: '800', color: colors.title },

@@ -44,7 +44,8 @@ Clique em **Save changes**.
 
 ## Parte 4: textos dos e-mails (com o código)
 
-**Authentication** > **Emails** > aba **Templates**. Em cada modelo, troque o assunto e o corpo (HTML) e clique em **Save**.
+**Authentication** > **Emails** > aba **Templates**. Em cada modelo, troque o assunto (*Subject*) e o corpo (*Body*, em HTML), e clique em **Save**.
+Sem isso os e-mails chegam com o texto padrão do Supabase, em inglês ("Reset your password"). As partes entre `{{ }}` não podem ser apagadas: são elas que colocam o código e o link.
 
 ### Invite user (aprovar com código por e-mail)
 
@@ -88,6 +89,35 @@ Corpo:
 <p><a href="{{ .ConfirmationURL }}">Criar nova senha</a></p>
 <p>Se você não pediu, ignore esta mensagem. A sua senha continua a mesma.</p>
 ```
+
+### Change email address (quando a pessoa troca o e-mail em Meu perfil)
+
+Assunto:
+```
+Confirme o novo e-mail do FGRC-M
+```
+Corpo:
+```html
+<h2>Confirme o novo e-mail</h2>
+<p>Recebemos um pedido para trocar o e-mail da conta do FGRC-M de {{ .Email }} para {{ .NewEmail }}.</p>
+<p><a href="{{ .ConfirmationURL }}">Confirmar a troca de e-mail</a></p>
+<p>Se você não pediu, ignore esta mensagem. O e-mail da conta continua o mesmo.</p>
+```
+
+### Confirm sign up (o app não usa cadastro aberto, mas é bom deixar em português)
+
+Assunto:
+```
+Confirme o seu e-mail no FGRC-M
+```
+Corpo:
+```html
+<h2>Confirme o seu e-mail</h2>
+<p><a href="{{ .ConfirmationURL }}">Confirmar e-mail</a></p>
+<p>Se você não pediu acesso ao FGRC-M, ignore esta mensagem.</p>
+```
+
+Se aparecer mais algum e-mail em inglês (por exemplo, aviso de senha alterada), ele fica na mesma área de **Emails** do Supabase e pode ser traduzido do mesmo jeito: troque só o texto e mantenha as partes entre `{{ }}`.
 
 ## Parte 5: endereços permitidos do link de senha
 
