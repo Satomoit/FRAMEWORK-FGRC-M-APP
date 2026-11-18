@@ -1,8 +1,7 @@
 // aqui fica o registro de uma avaliação feita de verdade (sem números inventados)
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TODAS_QUESTOES_FGRC } from '@/features/p03-avaliacoes-questionario/questionarioData';
-
-const STORAGE_KEY = 'fgrcm:avaliacoes-concluidas:v1';
+// [integração] o histórico agora fica separado por conta (ver src/lib/armazenamento-local.ts)
+import { gravarHistoricoBruto, lerHistoricoBruto } from '@/lib/armazenamento-local';
 
 // a gente salva a pergunta e a resposta juntas pra um relatório antigo não mudar se o questionário mudar
 export type RespostaRegistrada = {
@@ -16,6 +15,9 @@ export type RespostaRegistrada = {
   descricao: string;
   nist: string;
   recomendacao: string | null;
+  // [integração] nota máxima dessa pergunta (4 na maioria, 3 nas do eixo AWR, igual ao formulário)
+  // é opcional pq as avaliações salvas antes disso não têm (aí o cálculo procura no questionário)
+  valorMaximo?: number;
 };
 
 export type AvaliacaoRegistrada = {
@@ -58,10 +60,18 @@ export function montarAvaliacao(respostas: Record<string, number>): AvaliacaoReg
       descricao: opcao.descricao,
       nist: q.nist,
       recomendacao,
+      valorMaximo: Math.max(...q.alternativas.map(a => a.valor)),
     };
   });
 
   return {
+    // código da avaliação (ex: 1794965872843-mfrh6s91), feito em 2 partes:
+    //   1) Date.now() = quantos milissegundos passaram desde 01/01/1970 até a hora que vc clicou em Finalizar
+    //      (é o jeito padrão do JavaScript de contar o tempo, então muda a cada milésimo de segundo)
+    //   2) Math.random().toString(36).slice(2, 10) = sorteia um número e escreve ele em base 36
+    //      (base 36 usa 0-9 e a-z, por isso aparecem letras), aí pega só 8 caracteres
+    // juntando os dois fica praticamente impossível duas avaliações terem o mesmo código
+    // não é senha nem dado sigiloso: serve só pra separar uma avaliação da outra no aparelho
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
     finalizadaEm: new Date().toISOString(),
     respostas: registros,
@@ -69,7 +79,7 @@ export function montarAvaliacao(respostas: Record<string, number>): AvaliacaoReg
 }
 
 export async function listarAvaliacoes(): Promise<AvaliacaoRegistrada[]> {
-  const texto = await AsyncStorage.getItem(STORAGE_KEY);
+  const texto = await lerHistoricoBruto();
   if (!texto) return [];
   let parsed: unknown;
   try { parsed = JSON.parse(texto); } catch { throw new Error('O histórico de avaliações está danificado'); }
@@ -87,6 +97,6 @@ export async function finalizarAvaliacao(respostas: Record<string, number>): Pro
   const registro = montarAvaliacao(respostas);
   // só considera finalizada depois que o armazenamento confirma a gravação
   const anteriores = await listarAvaliacoes();
-  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify([registro, ...anteriores]));
+  await gravarHistoricoBruto(JSON.stringify([registro, ...anteriores]));
   return registro;
 }

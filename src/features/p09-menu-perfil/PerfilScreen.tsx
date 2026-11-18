@@ -30,10 +30,13 @@ type ProfileMode = 'view' | 'edit' | 'password';
 // define os dados e as funções que o perfil recebe
 type Props = {
   profile: ProfileData;
-  onSaveProfile: (next: ProfileData) => void;
+  // [integração] pode devolver uma Promise com o aviso de sucesso (quando salva de verdade no Supabase)
+  onSaveProfile: (next: ProfileData) => void | Promise<string | void>;
   onBack: () => void;
   // função opcional pra autenticação real no futuro (não ta conectada nessa previa)
   onChangePassword?: (currentPassword: string, newPassword: string) => Promise<void>;
+  // [integração P11] se vier essa função, o Alterar senha abre a tela 20 (P11) em vez do formulário de demonstração
+  onOpenChangePassword?: () => void;
 };
 
 // componente pequeno que mostra cada informação do perfil
@@ -50,7 +53,7 @@ function FieldDisplay({ label, value, last = false }: { label: string; value: st
 }
 
 // essa é a tela 18 do protótipo (Meu perfil)
-export default function PerfilScreen({ profile, onSaveProfile, onBack, onChangePassword }: Props) {
+export default function PerfilScreen({ profile, onSaveProfile, onBack, onChangePassword, onOpenChangePassword }: Props) {
   const { colors } = useFgrcTheme();
   // começa mostrando o perfil (edit e password só aparecem quando vc clicar)
   const [mode, setMode] = useState<ProfileMode>('view');
@@ -83,6 +86,11 @@ export default function PerfilScreen({ profile, onSaveProfile, onBack, onChangeP
 
   // limpa as senhas antigas e abre o formulário de troca
   function startPassword() {
+    // [integração P11] com a tela real da Nicole ligada, vai pra ela (o formulário daqui é só demonstração)
+    if (onOpenChangePassword) {
+      onOpenChangePassword();
+      return;
+    }
     // limpa a senha digitada assim que termina
     setCurrentPassword('');
     // limpa também a nova senha
@@ -101,7 +109,8 @@ export default function PerfilScreen({ profile, onSaveProfile, onBack, onChangeP
   }
 
   // valida os dados antes de atualizar a demonstração
-  function saveProfile() {
+  async function saveProfile() {
+    if (saving) return;
     // aqui tira espaços extras e normaliza o email
     const next = {
       ...draft,
@@ -121,8 +130,24 @@ export default function PerfilScreen({ profile, onSaveProfile, onBack, onChangeP
       setError('Digite um e-mail institucional válido.');
       return;
     }
+    // [integração] quando a rota manda uma função que salva de verdade, espera ela terminar
+    const resultado = onSaveProfile(next);
+    if (resultado instanceof Promise) {
+      setSaving(true);
+      setError('');
+      try {
+        const aviso = await resultado;
+        setMode('view');
+        setMessage(aviso || 'Dados salvos.');
+      } catch (e) {
+        // fica no formulário pra pessoa corrigir e tentar de novo
+        setError(e instanceof Error && e.message ? e.message : 'Não foi possível salvar. Tente de novo.');
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
     // atualiza os dados visíveis na prévia (não manda pro servidor)
-    onSaveProfile(next);
     // depois de salvar volta pra visualização
     setMode('view');
     setError('');
@@ -203,11 +228,18 @@ export default function PerfilScreen({ profile, onSaveProfile, onBack, onChangeP
           {/* cada campo mexe só no rascunho (salva tudo no botão Salvar) */}
           <FormField label="Nome completo" value={draft.name} onChangeText={v => { setDraft(p => ({ ...p, name: v })); setError(''); }} />
           <FormField label="E-mail institucional" email value={draft.email} hint="No sistema definitivo, alterações de e-mail estarão sujeitas à aprovação." onChangeText={v => { setDraft(p => ({ ...p, email: v })); setError(''); }} />
-          <FormField label="Prefeitura" value={draft.cityHall} onChangeText={v => { setDraft(p => ({ ...p, cityHall: v })); setError(''); }} />
-          <FormField label="Município" value={draft.city} onChangeText={v => { setDraft(p => ({ ...p, city: v })); setError(''); }} />
-          <FormField label="Estado" value={draft.state} onChangeText={v => { setDraft(p => ({ ...p, state: v })); setError(''); }} />
+          {/* [integração B1c] prefeitura, município e estado vêm do cadastro aprovado */}
+          {/* então aparecem só pra leitura (quem muda isso é a administração, não o usuário) */}
+          <View style={styles.details}>
+            <FieldDisplay label="Prefeitura" value={draft.cityHall} />
+            <FieldDisplay label="Município" value={draft.city} />
+            <FieldDisplay label="Estado" value={draft.state} last />
+          </View>
+          <Text style={[styles.readOnlyHint, { color: colors.muted }]}>
+            Prefeitura, município e estado não podem ser alterados por aqui. Para corrigir, fale com a administração do FGRC-M.
+          </Text>
           {error ? <Notice kind="error" message={error} /> : null}
-          <FgrcButton label="Salvar alterações" onPress={saveProfile} />
+          <FgrcButton label={saving ? 'Salvando...' : 'Salvar alterações'} disabled={saving} onPress={() => { void saveProfile(); }} />
           <View style={styles.buttonGap} />
           <FgrcButton label="Cancelar" variant="outlined" onPress={() => setMode('view')} />
         </View>
@@ -245,6 +277,8 @@ const styles = StyleSheet.create({
   // distancia os botões do bloco de informações
   actions: { marginTop: 29 },
   buttonGap: { height: 11 },
+  // [integração B1c] texto de aviso embaixo dos campos travados
+  readOnlyHint: { fontSize: 13, lineHeight: 19, marginTop: -4, marginBottom: 14 },
   form: { marginTop: 6 },
   formGap: { height: 16 },
 });

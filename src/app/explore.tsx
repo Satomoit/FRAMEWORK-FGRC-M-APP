@@ -52,6 +52,11 @@ export default function SolicitacaoEnviada() {
             <Text style={styles.statusDescription}>
               O acesso será liberado após a aprovação do administrador.
             </Text>
+            {/* [integração] explica o próximo passo depois da aprovação */}
+            <Text style={[styles.statusDescription, { marginTop: 8 }]}>
+              Quando o pedido for aprovado, a administração do FGRC-M vai passar as instruções
+              do primeiro acesso (uma senha provisória ou um código enviado por e-mail).
+            </Text>
           </View>
 
           {/* Botão voltar para login */}

@@ -1,3 +1,4 @@
+import { useRouter, type Href } from 'expo-router';
 import { useRef, useState, type ComponentRef } from 'react';
 import {
   ActivityIndicator,
@@ -17,6 +18,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 
 export default function LoginScreen() {
+  // [integração] usado pelos links Esqueci minha senha e Solicitar acesso
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [mensagem, setMensagem] = useState('');
@@ -170,11 +173,8 @@ export default function LoginScreen() {
               accessibilityRole="button"
               style={styles.forgotButton}
               disabled={carregando}
-              onPress={() =>
-                setMensagem(
-                  'A recuperação de senha ainda não está disponível nesta versão.'
-                )
-              }
+              // [integração P07] abre a tela de recuperação de senha (envio real pelo Supabase)
+              onPress={() => router.push('/recuperar-senha')}
             >
               <Text style={styles.link}>Esqueci minha senha</Text>
             </Pressable>
@@ -220,13 +220,36 @@ export default function LoginScreen() {
                 accessibilityRole="button"
                 style={styles.registerButton}
                 disabled={carregando}
-                onPress={() =>
-                  setMensagem(
-                    'A solicitação de acesso ainda não está disponível nesta versão.'
-                  )
-                }
+                // [integração P02] abre o formulário de pedido de acesso da Liz
+                onPress={() => router.push('/solicitar-acesso')}
               >
                 <Text style={styles.link}>Solicitar acesso</Text>
+              </Pressable>
+            </View>
+
+            {/* [integração] depois que a administração aprova, a pessoa ativa o acesso com o código do e-mail */}
+            <View style={styles.registerRow}>
+              <Text style={styles.registerText}>Seu pedido foi aprovado?</Text>
+              <Pressable
+                accessibilityRole="button"
+                style={styles.registerButton}
+                disabled={carregando}
+                onPress={() => router.push('/ativar-acesso' as Href)}
+              >
+                <Text style={styles.link}>Ativar acesso</Text>
+              </Pressable>
+            </View>
+
+            {/* [integração] quem não consegue entrar também precisa de um jeito de pedir ajuda */}
+            <View style={styles.registerRow}>
+              <Text style={styles.registerText}>Precisa de ajuda?</Text>
+              <Pressable
+                accessibilityRole="button"
+                style={styles.registerButton}
+                disabled={carregando}
+                onPress={() => router.push('/suporte' as Href)}
+              >
+                <Text style={styles.link}>Falar com o suporte</Text>
               </Pressable>
             </View>
           </View>

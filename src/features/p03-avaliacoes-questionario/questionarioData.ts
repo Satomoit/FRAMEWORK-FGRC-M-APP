@@ -92,7 +92,7 @@ export const EIXOS_FGRC: EixoFgrc[] = [
         eixoNome: 'Governança',
         numeroNoEixo: 2,
         totalNoEixo: 5,
-        nist: 'NIST GV.RM / GV.RM-06',
+        nist: 'NIST → GV.RM → GV.RM-06', // [integração] escrito igual ao formulário
         pergunta:
           'O município estabelece e comunica um processo formal para avaliar, documentar, categorizar e priorizar os riscos cibernéticos?',
         alternativas: [

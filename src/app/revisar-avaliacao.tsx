@@ -1,4 +1,4 @@
-﻿
+
 import { useRouter } from 'expo-router';
 
 import {
@@ -14,11 +14,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function RevisarAvaliacao() {
   const router = useRouter();
 
-  // Quantidade de quest├Áes pendentes.
-  // Futuramente, esse valor ser├í conectado ├ás respostas do question├írio.
+  // Quantidade de questões pendentes.
+  // Futuramente, esse valor será conectado às respostas do questionário.
   const questoesPendentes = 0;
 
-  // O bot├úo s├│ ser├í habilitado quando n├úo houver quest├Áes pendentes.
+  // O botão só será habilitado quando não houver questões pendentes.
   const podeFinalizar = questoesPendentes === 0;
 
   function finalizarAvaliacao() {
@@ -30,7 +30,7 @@ export default function RevisarAvaliacao() {
   }
 
   function voltarAsQuestoes() {
-    // Navega├º├úo ser├í conectada quando as telas de quest├Áes forem criadas.
+    // Navegação será conectada quando as telas de questões forem criadas.
   }
 
   return (
@@ -40,18 +40,18 @@ export default function RevisarAvaliacao() {
         showsVerticalScrollIndicator={false}
       >
 
-        {/* BOT├âO VOLTAR */}
+        {/* BOTÃO VOLTAR */}
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Text style={styles.backArrow}>ÔÇ╣</Text>
+          <Text style={styles.backArrow}>‹</Text>
         </TouchableOpacity>
 
-        {/* CABE├çALHO */}
+        {/* CABEÇALHO */}
         <View style={styles.header}>
           <Text style={styles.title}>
-            Revisar avalia├º├úo
+            Revisar avaliação
           </Text>
 
           <Text style={styles.subtitle}>
@@ -63,7 +63,7 @@ export default function RevisarAvaliacao() {
         <View style={styles.statsContainer}>
 
           <View style={styles.statCard}>
-            <Text style={styles.checkIcon}>Ô£ô</Text>
+            <Text style={styles.checkIcon}>✓</Text>
 
             <Text style={styles.statNumber}>0</Text>
 
@@ -73,7 +73,7 @@ export default function RevisarAvaliacao() {
           </View>
 
           <View style={styles.statCard}>
-            <Text style={styles.warningIcon}>ÔÜá</Text>
+            <Text style={styles.warningIcon}>⚠</Text>
 
             <Text style={styles.statNumber}>
               {questoesPendentes}
@@ -86,29 +86,29 @@ export default function RevisarAvaliacao() {
 
         </View>
 
-        {/* QUEST├òES PENDENTES */}
+        {/* QUESTÕES PENDENTES */}
         <View style={styles.questionsCard}>
 
           <Text style={styles.questionsTitle}>
-            Quest├Áes pendentes
+            Questões pendentes
           </Text>
 
           <Text style={styles.questionsSubtitle}>
-            Ainda faltam respostas para estas quest├Áes:
+            Ainda faltam respostas para estas questões:
           </Text>
 
         </View>
 
         {/* AVISO */}
         <View style={styles.infoContainer}>
-          <Text style={styles.infoIcon}>Ôôÿ</Text>
+          <Text style={styles.infoIcon}>ⓘ</Text>
 
           <Text style={styles.infoText}>
-            Responda ├ás quest├Áes pendentes para finalizar.
+            Responda às questões pendentes para finalizar.
           </Text>
         </View>
 
-        {/* BOT├âO FINALIZAR */}
+        {/* BOTÃO FINALIZAR */}
         <TouchableOpacity
           style={[
             styles.finishButton,
@@ -128,18 +128,18 @@ export default function RevisarAvaliacao() {
                 : styles.finishButtonTextDisabled,
             ]}
           >
-            Finalizar avalia├º├úo
+            Finalizar avaliação
           </Text>
         </TouchableOpacity>
 
-        {/* BOT├âO VOLTAR ├ÇS QUEST├òES */}
+        {/* BOTÃO VOLTAR ÀS QUESTÕES */}
         <TouchableOpacity
           style={styles.backQuestionsButton}
           onPress={voltarAsQuestoes}
           activeOpacity={0.8}
         >
           <Text style={styles.backQuestionsText}>
-            Voltar ├ás quest├Áes
+            Voltar às questões
           </Text>
         </TouchableOpacity>
 
@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
   },
 
-  // BOT├âO VOLTAR
+  // BOTÃO VOLTAR
   backButton: {
     width: 35,
     height: 35,
@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
     fontWeight: '300',
   },
 
-  // CABE├çALHO
+  // CABEÇALHO
   header: {
     marginBottom: 21,
   },
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
     color: '#52647C',
   },
 
-  // CARD DE QUEST├òES
+  // CARD DE QUESTÕES
   questionsCard: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
     color: '#52647C',
   },
 
-  // BOT├âO FINALIZAR
+  // BOTÃO FINALIZAR
   finishButton: {
     width: '100%',
     height: 47,
@@ -292,14 +292,14 @@ const styles = StyleSheet.create({
     marginBottom: 13,
   },
 
-  // BOT├âO HABILITADO
+  // BOTÃO HABILITADO
   finishButtonEnabled: {
     backgroundColor: '#10568F',
     borderWidth: 1,
     borderColor: '#10568F',
   },
 
-  // BOT├âO DESABILITADO
+  // BOTÃO DESABILITADO
   finishButtonDisabled: {
     backgroundColor: '#F4F7FC',
     borderWidth: 1,
@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
     color: '#52647C',
   },
 
-  // BOT├âO VOLTAR ├ÇS QUEST├òES
+  // BOTÃO VOLTAR ÀS QUESTÕES
   backQuestionsButton: {
     width: '100%',
     height: 47,

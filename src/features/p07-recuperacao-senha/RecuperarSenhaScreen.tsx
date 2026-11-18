@@ -45,7 +45,8 @@ export default function RecuperarSenhaScreen({ onBackToLogin, onRequestSuccess, 
       setLoading(true);
       // espera o pedido de recuperação terminar antes de seguir
       try { await requestReset(normalized); }
-      catch { setError('Não foi possível solicitar a recuperação. Tente novamente.'); setLoading(false); return; }
+      // [integração P07] se o envio explicar o motivo (ex: limite de e-mails), mostra ele; senão a mensagem de sempre
+      catch (e) { setError(e instanceof Error && e.message ? e.message : 'Não foi possível solicitar a recuperação. Tente novamente.'); setLoading(false); return; }
       setLoading(false);
     }
     // se passou na validação abre a próxima etapa

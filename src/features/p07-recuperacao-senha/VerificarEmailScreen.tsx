@@ -36,7 +36,8 @@ export default function VerificarEmailScreen({ email, onBackToLogin, onEditEmail
     setBusy(true);
     // quando existir integração tenta reenviar pro email recebido
     try { await resendReset(email); setNotice('Solicitação de reenvio realizada. Se o endereço estiver cadastrado, verifique sua caixa de entrada.'); }
-    catch { setNotice('Não foi possível reenviar as instruções. Tente novamente.'); }
+    // [integração P07] mostra o motivo real quando vier (ex: limite de e-mails do Supabase)
+    catch (e) { setNotice(e instanceof Error && e.message ? e.message : 'Não foi possível reenviar as instruções. Tente novamente.'); }
     // libera o botão mesmo se o reenvio der erro
     finally { setBusy(false); }
   }
@@ -67,6 +68,8 @@ export default function VerificarEmailScreen({ email, onBackToLogin, onEditEmail
         {!resendReset ? <Notice message="Demonstração: nenhum e-mail real foi enviado nesta etapa." /> : null}
       </View>
       {/* esse link é só demonstrativo (a redefinição de senha pertence à P08) */}
+      {/* [integração P07] no fluxo real o link chega por e-mail, então o botão de simular só aparece se alguém passar onOpenResetLink */}
+      {onOpenResetLink ? (
       <Pressable
         accessibilityRole="button"
         style={styles.simulateLink}
@@ -74,6 +77,7 @@ export default function VerificarEmailScreen({ email, onBackToLogin, onEditEmail
       >
         <Text style={[styles.simulateText, { color: colors.blue }]}>Simular abertura do link do e-mail →</Text>
       </Pressable>
+      ) : null}
     </Page>
   );
 }

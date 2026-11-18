@@ -3,6 +3,14 @@
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { Recommendation, Report } from './types';
+// [integração] nota máxima, referência, data/hora e explicação do cálculo (mesmas do PDF da web)
+import {
+  EXPLICACAO_DO_CALCULO,
+  comLetraMaiuscula,
+  dataHoraDa,
+  textoReferencia,
+  valorMaximoDa,
+} from '@/lib/calcular-relatorio';
 
 const escape = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -57,9 +65,9 @@ export function buildHtml(report: Report, recs: Recommendation[]): string {
     <article class="answer">
       <h3>${indice + 1}. ${escape(r.codigo)} — ${escape(r.eixo)}</h3>
       <p><b>Pergunta:</b> ${escape(r.pergunta)}</p>
-      <p><b>Resposta:</b> ${r.valor}/4 — ${escape(r.alternativa)}. ${escape(r.descricao)}</p>
-      <p class="ref"><b>Referência:</b> ${escape(r.nist)}</p>
-      ${r.recomendacao ? `<p><b>Recomendação:</b> ${escape(r.recomendacao)}</p>` : '<p>Nível aprimorado: sem recomendação corretiva cadastrada para esta resposta.</p>'}
+      <p><b>Resposta:</b> ${escape(r.alternativa)} (nota ${r.valor} de ${valorMaximoDa(r)}). ${escape(comLetraMaiuscula(r.descricao))}</p>
+      ${r.recomendacao ? `<p><b>Recomendação:</b> ${escape(r.recomendacao)}</p>` : '<p><b>Recomendação:</b> nenhuma. A prática já está no nível mais alto.</p>'}
+      <p class="ref"><b>Referência:</b> ${escape(textoReferencia(r.nist))}</p>
     </article>
   `).join('');
 
@@ -90,7 +98,8 @@ export function buildHtml(report: Report, recs: Recommendation[]): string {
     @page { size: A4; margin: 16mm; }
   </style></head><body>
     <h1>FGRC-M — Relatório de avaliação</h1>
-    <div class="meta">Avaliação de ${escape(report.date)} • ${escape(report.index)}</div>
+    ${report.prefeitura ? `<div class="meta"><b>${escape(report.prefeitura)}</b></div>` : ''}
+    <div class="meta">Data da avaliação: ${escape(report.finalizedAt ? dataHoraDa(report.finalizedAt) : report.date)}<br />Código da avaliação: ${escape(report.id)}</div>
 
     <div class="box">
       <div class="meta" style="margin-bottom:8px">Índice de exposição cibernética municipal</div>
@@ -102,7 +111,7 @@ export function buildHtml(report: Report, recs: Recommendation[]): string {
     ${dimensions ? `<h2>Resultados por dimensão</h2><div class="box">${dimensions}</div>` : ''}
     ${points ? `<h2>Pontos de atenção</h2><div class="box">${points}</div>` : ''}
 
-    <p class="meta">Método deste MVP: índice de exposição = 100 - (média das respostas / 4 × 100). Faixas provisórias: 0–33 baixo, 34–66 intermediário e 67–100 alto; validar com o orientador.</p>
+    <p class="meta">${escape(EXPLICACAO_DO_CALCULO)}</p>
     <h2>Respostas completas (${report.answers?.length ?? 0})</h2>
     ${answers}
     <h2>Recomendações prioritárias</h2>${items || '<p>Não há recomendações corretivas cadastradas para estas respostas.</p>'}

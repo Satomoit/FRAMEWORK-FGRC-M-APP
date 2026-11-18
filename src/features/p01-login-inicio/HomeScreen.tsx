@@ -1,18 +1,23 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Redirect } from 'expo-router';
-import { useEffect, useState, type ComponentProps } from 'react';
+import { Redirect, router, useFocusEffect, type Href } from 'expo-router';
+import { useCallback, useEffect, useState, type ComponentProps } from 'react';
 import {
-    ActivityIndicator,
-    Modal,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { usePreferencias } from '@/features/p11-configuracoes/PreferenciasProvider';
 import { supabase } from '@/lib/supabase';
+// [integração B1b] junta os dados reais da Home (rascunho, histórico e prefeitura da conta)
+import { carregarResumoInicio } from '@/lib/resumo-inicio';
+// [integração] mini tutorial (primeira vez pergunta se quer ver; depois abre pelo "Como usar")
+import TutorialInicial, { useTutorial } from '@/features/integracao/TutorialInicial';
 
 type NomeIcone = ComponentProps<typeof Ionicons>['name'];
 
@@ -21,6 +26,8 @@ type DadosInicio = {
   progresso: number | null;
   ultimaAvaliacao: string | null;
   quantidadePrioridades: number | null;
+  // [integração] ex: "75 de 100 (Alto)" (vem da última avaliação salva)
+  resultado?: string | null;
   pontosAtencao: {
     id: string;
     titulo: string;
@@ -45,14 +52,88 @@ const itensMenu: { nome: string; icone: NomeIcone }[] = [
 ];
 
 export default function HomeScreen() {
+  const {
+    preferencias,
+    carregando: carregandoPreferencias,
+  } = usePreferencias();
+
   const [carregando, setCarregando] = useState(true);
   const [autenticado, setAutenticado] = useState(false);
   const [maisAberto, setMaisAberto] = useState(false);
   const [saindo, setSaindo] = useState(false);
   const [mensagem, setMensagem] = useState('');
 
-  // Preencher pela fonte real das avaliações quando ela for integrada.
-  const [dados] = useState<DadosInicio>(dadosIniciais);
+  // Receberá os dados reais quando a fonte das avaliações for integrada.
+  // [integração B1b] agora recebe: começa vazio ("—") e é preenchido com o que ta salvo no aparelho
+  const [dados, setDados] = useState<DadosInicio>(dadosIniciais);
+  const tutorial = useTutorial();
+  // [integração] a Home mostra só os 3 primeiros pontos de atenção (o resto fica em Resultados)
+  const MAX_PONTOS_NA_HOME = 3;
+
+  // [integração] conta criada pela administração com senha provisória: a pessoa troca a senha antes de tudo
+  // (essa marca fica no user_metadata e some quando a senha nova é salva na tela Alterar senha)
+  useEffect(() => {
+    if (!autenticado) return;
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user?.user_metadata?.senha_provisoria === true) {
+        router.replace('/alterar-senha?provisoria=1' as Href);
+      }
+    }).catch(() => {});
+  }, [autenticado]);
+
+  // [integração B1b] recarrega toda vez que a Home aparece de novo na tela
+  // (ex: vc respondeu umas perguntas e voltou, aí a porcentagem já vem atualizada)
+  useFocusEffect(
+    useCallback(() => {
+      if (!autenticado) return;
+      let ativo = true;
+      carregarResumoInicio()
+        .then((resumo) => {
+          if (ativo) setDados(resumo);
+        })
+        .catch(() => {
+          // se der erro deixa o "—" que já tava (não inventa número)
+        });
+      return () => {
+        ativo = false;
+      };
+    }, [autenticado])
+  );
+
+  // [integração P11] usa o tema que ta valendo de verdade (se for Automático, segue o navegador/celular)
+  const { temaAtivo, escalaFonte } = usePreferencias();
+  const escuro = temaAtivo === 'escuro';
+  const contraste = preferencias.altoContraste;
+
+  // [integração P11] agora o tamanho vem da barrinha (Configurações > Tamanho do texto)
+  const escala = escalaFonte;
+
+  const cores = {
+    fundo: contraste
+      ? escuro ? '#000000' : '#FFFFFF'
+      : escuro ? '#101827' : '#F5F8FC',
+    cartao: contraste
+      ? escuro ? '#000000' : '#FFFFFF'
+      : escuro ? '#182438' : '#FFFFFF',
+    texto: escuro ? '#FFFFFF' : contraste ? '#000000' : '#17263E',
+    secundario: escuro
+      ? contraste ? '#FFFFFF' : '#C5D1E2'
+      : contraste ? '#000000' : '#465B76',
+    borda: contraste
+      ? escuro ? '#FFFFFF' : '#000000'
+      : escuro ? '#8293AC' : '#52647C',
+    divisor: contraste
+      ? escuro ? '#FFFFFF' : '#000000'
+      : escuro ? '#465B76' : '#D9D9D9',
+    botao: escuro ? '#9DD3FF' : '#11558B',
+    textoBotao: escuro ? '#000000' : '#FFFFFF',
+    laranja: escuro ? '#FFAD5C' : '#FF8C28',
+    alertaAlto: escuro ? '#FCA5A5' : '#C62828',
+    alertaMedio: escuro ? '#FCD34D' : '#946000',
+    sair: escuro ? '#FCA5A5' : '#B42318',
+  };
+
+  const styles = criarEstilos(cores, escala);
 
   useEffect(() => {
     const {
@@ -65,17 +146,51 @@ export default function HomeScreen() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // [integração B1] cada botão da Home leva pra tela que o grupo já fez
+  // (os nomes são os mesmos que a Nicole já passava pra essa função)
+  // fica como texto comum e vira Href só no push, igual as outras rotas de integração fazem
+  const rotasDaHome: Record<string, string> = {
+    'Avaliações': '/avaliacoes',
+    'Nova avaliação': '/avaliacoes',
+    'Continuar avaliação': '/avaliacoes',
+    'Resultados': '/resultados-revisao',
+    'Relatórios': '/relatorios-revisao',
+    // o Mais da barra abre a tela 17 da P09 (a mesma que a barra das outras telas abre)
+    'Mais': '/mais',
+    // abre o Meu perfil da P09 direto (sem passar pelo menu)
+    'Meu perfil': '/mais?tela=perfil',
+  };
+
   function abrirFuncionalidade(nome: string) {
     setMaisAberto(false);
+
+    const rota = rotasDaHome[nome];
+    if (rota) {
+      router.push(rota as Href);
+      return;
+    }
+
+    // [integração B1] o que ainda não tem tela no app continua com o aviso original da P01
     setMensagem(
       `${nome} ainda não está disponível nesta versão do aplicativo.`
     );
+  }
+
+  function abrirConfiguracoes() {
+    setMaisAberto(false);
+    router.push('/configuracoes');
+  }
+
+  function abrirAlterarSenha() {
+    setMaisAberto(false);
+    router.push('/alterar-senha');
   }
 
   async function sair() {
     if (saindo) return;
 
     setSaindo(true);
+    setMensagem('');
 
     try {
       const { error } = await supabase.auth.signOut();
@@ -96,13 +211,13 @@ export default function HomeScreen() {
     }
   }
 
-  if (carregando) {
+  if (carregando || carregandoPreferencias) {
     return (
       <View style={styles.loading}>
         <ActivityIndicator
           size="large"
-          color="#11558B"
-          accessibilityLabel="Verificando sessão"
+          color={cores.botao}
+          accessibilityLabel="Carregando página inicial"
         />
       </View>
     );
@@ -135,6 +250,7 @@ export default function HomeScreen() {
             <Text style={styles.cardTitle}>
               Avaliação em andamento
             </Text>
+
             <Text style={styles.subtitle}>
               Continue de onde parou
             </Text>
@@ -160,25 +276,28 @@ export default function HomeScreen() {
             </View>
 
             <Text style={styles.progressText}>
+              {/* [integração B1b] sem rascunho mostra um texto que dá pra entender (antes era "— concluído") */}
               {progresso === null
-                ? '— concluído'
+                ? 'Nenhuma avaliação em andamento'
                 : `${progresso}% concluído`}
             </Text>
 
+            {/* [integração B1b] sem rascunho o botão vira "Iniciar avaliação" em vez de ficar travado */}
             <Pressable
               accessibilityRole="button"
-              accessibilityState={{ disabled: progresso === null }}
-              disabled={progresso === null}
               style={({ pressed }) => [
                 styles.continueButton,
-                progresso === null && styles.disabled,
                 pressed && styles.pressed,
               ]}
               onPress={() =>
-                abrirFuncionalidade('Continuar avaliação')
+                abrirFuncionalidade(
+                  progresso === null ? 'Nova avaliação' : 'Continuar avaliação'
+                )
               }
             >
-              <Text style={styles.continueText}>Continuar</Text>
+              <Text style={styles.continueText}>
+                {progresso === null ? 'Iniciar avaliação' : 'Continuar'}
+              </Text>
             </Pressable>
           </View>
 
@@ -193,6 +312,17 @@ export default function HomeScreen() {
             <Text style={styles.summaryText}>
               Última avaliação: {dados.ultimaAvaliacao ?? '—'}
             </Text>
+
+            {/* [integração] mostra o número da última avaliação e explica em uma frase como ler */}
+            <Text style={styles.summaryText}>
+              Resultado: {dados.resultado ?? '—'}
+            </Text>
+            {dados.resultado ? (
+              <Text style={styles.summaryText}>
+                Quanto maior o número, maior o risco.
+              </Text>
+            ) : null}
+
             <Text style={styles.summaryText}>
               Prioridades:{' '}
               {dados.quantidadePrioridades === null
@@ -213,7 +343,7 @@ export default function HomeScreen() {
                 </Text>
               </View>
             ) : (
-              dados.pontosAtencao.map((ponto, index) => (
+              dados.pontosAtencao.slice(0, MAX_PONTOS_NA_HOME).map((ponto, index) => (
                 <View key={ponto.id}>
                   {index > 0 && <View style={styles.divider} />}
 
@@ -227,8 +357,8 @@ export default function HomeScreen() {
                       size={23}
                       color={
                         ponto.prioridade === 'alta'
-                          ? '#C62828'
-                          : '#B87512'
+                          ? cores.alertaAlto
+                          : cores.alertaMedio
                       }
                       accessibilityLabel={
                         ponto.prioridade === 'alta'
@@ -236,6 +366,7 @@ export default function HomeScreen() {
                           : 'Prioridade média'
                       }
                     />
+
                     <Text style={styles.attentionText}>
                       {ponto.titulo}
                     </Text>
@@ -243,6 +374,18 @@ export default function HomeScreen() {
                 </View>
               ))
             )}
+            {/* [integração] se tiver mais de 3, leva pra tela de Resultados (deixa a Home mais limpa) */}
+            {dados.pontosAtencao.length > MAX_PONTOS_NA_HOME ? (
+              <Pressable
+                accessibilityRole="link"
+                onPress={() => abrirFuncionalidade('Resultados')}
+                style={({ pressed }) => [pressed && styles.pressed]}
+              >
+                <Text style={styles.summaryText}>
+                  Ver todos os {dados.pontosAtencao.length} pontos em Resultados ›
+                </Text>
+              </Pressable>
+            ) : null}
           </View>
 
           <Text style={styles.sectionTitle}>Acesso rápido</Text>
@@ -259,7 +402,7 @@ export default function HomeScreen() {
               <Ionicons
                 name="document-text-outline"
                 size={25}
-                color="#111111"
+                color={cores.texto}
               />
               <Text style={styles.quickText}>Relatórios</Text>
             </Pressable>
@@ -275,12 +418,53 @@ export default function HomeScreen() {
               <Ionicons
                 name="add-circle-outline"
                 size={25}
-                color="#111111"
+                color={cores.texto}
               />
               <Text style={styles.quickText}>Nova avaliação</Text>
             </Pressable>
           </View>
+
+          {/* [integração] ajuda sempre à vista: tutorial de novo e falar com o suporte */}
+          <View style={[styles.quickRow, { marginTop: 12 }]}>
+            <Pressable
+              accessibilityRole="button"
+              style={({ pressed }) => [
+                styles.quickCard,
+                pressed && styles.pressed,
+              ]}
+              onPress={tutorial.abrir}
+            >
+              <Ionicons
+                name="help-circle-outline"
+                size={25}
+                color={cores.texto}
+              />
+              <Text style={styles.quickText}>Como usar o app</Text>
+            </Pressable>
+
+            <Pressable
+              accessibilityRole="button"
+              style={({ pressed }) => [
+                styles.quickCard,
+                pressed && styles.pressed,
+              ]}
+              onPress={() => router.push('/suporte' as Href)}
+            >
+              <Ionicons
+                name="chatbubble-ellipses-outline"
+                size={25}
+                color={cores.texto}
+              />
+              <Text style={styles.quickText}>Ajuda e suporte</Text>
+            </Pressable>
+          </View>
         </ScrollView>
+
+        <TutorialInicial
+          aberto={tutorial.aberto}
+          perguntar={tutorial.perguntar}
+          onFechar={tutorial.fechar}
+        />
 
         <View style={styles.bottomBar}>
           {itensMenu.map((item) => {
@@ -298,7 +482,10 @@ export default function HomeScreen() {
                 ]}
                 onPress={() => {
                   if (item.nome === 'Mais') {
-                    setMaisAberto(true);
+                    // [integração B1] antes abria o modal Mais daqui da Home
+                    // agora abre a tela Mais da P09, igual a barra das outras telas
+                    // (assim não fica dois menus Mais diferentes; o modal continua no código)
+                    abrirFuncionalidade('Mais');
                   } else if (!selecionado) {
                     abrirFuncionalidade(item.nome);
                   }
@@ -307,7 +494,7 @@ export default function HomeScreen() {
                 <Ionicons
                   name={item.icone}
                   size={27}
-                  color={selecionado ? '#FF8C28' : '#111111'}
+                  color={selecionado ? cores.laranja : cores.texto}
                 />
               </Pressable>
             );
@@ -323,61 +510,99 @@ export default function HomeScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Mais</Text>
-
-            <Pressable
-              accessibilityRole="button"
-              style={styles.menuItem}
-              onPress={() => abrirFuncionalidade('Meu perfil')}
+            <ScrollView
+              contentContainerStyle={styles.modalContent}
             >
-              <Ionicons name="person-outline" size={23} color="#17263E" />
-              <Text style={styles.menuText}>Meu perfil</Text>
-            </Pressable>
+              <Text style={styles.modalTitle}>Mais</Text>
 
-            <Pressable
-              accessibilityRole="button"
-              style={styles.menuItem}
-              onPress={() => abrirFuncionalidade('Configurações')}
-            >
-              <Ionicons name="settings-outline" size={23} color="#17263E" />
-              <Text style={styles.menuText}>Configurações</Text>
-            </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                style={styles.menuItem}
+                disabled={saindo}
+                onPress={() => abrirFuncionalidade('Meu perfil')}
+              >
+                <Ionicons
+                  name="person-outline"
+                  size={23}
+                  color={cores.texto}
+                />
+                <Text style={styles.menuText}>Meu perfil</Text>
+              </Pressable>
 
-            <Pressable
-              accessibilityRole="button"
-              style={styles.menuItem}
-              onPress={() =>
-                abrirFuncionalidade('Privacidade e termos')
-              }
-            >
-              <Ionicons
-                name="shield-checkmark-outline"
-                size={23}
-                color="#17263E"
-              />
-              <Text style={styles.menuText}>Privacidade e termos</Text>
-            </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                style={styles.menuItem}
+                disabled={saindo}
+                onPress={abrirAlterarSenha}
+              >
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={23}
+                  color={cores.texto}
+                />
+                <Text style={styles.menuText}>Alterar senha</Text>
+              </Pressable>
 
-            <Pressable
-              accessibilityRole="button"
-              disabled={saindo}
-              accessibilityState={{ disabled: saindo, busy: saindo }}
-              style={styles.menuItem}
-              onPress={() => void sair()}
-            >
-              <Ionicons name="log-out-outline" size={23} color="#B42318" />
-              <Text style={styles.logoutText}>
-                {saindo ? 'Saindo...' : 'Sair da conta'}
-              </Text>
-            </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                style={styles.menuItem}
+                disabled={saindo}
+                onPress={abrirConfiguracoes}
+              >
+                <Ionicons
+                  name="settings-outline"
+                  size={23}
+                  color={cores.texto}
+                />
+                <Text style={styles.menuText}>Configurações</Text>
+              </Pressable>
 
-            <Pressable
-              accessibilityRole="button"
-              style={styles.closeButton}
-              onPress={() => setMaisAberto(false)}
-            >
-              <Text style={styles.closeText}>Fechar</Text>
-            </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                style={styles.menuItem}
+                disabled={saindo}
+                onPress={() =>
+                  abrirFuncionalidade('Privacidade e termos')
+                }
+              >
+                <Ionicons
+                  name="shield-checkmark-outline"
+                  size={23}
+                  color={cores.texto}
+                />
+                <Text style={styles.menuText}>
+                  Privacidade e termos
+                </Text>
+              </Pressable>
+
+              <Pressable
+                accessibilityRole="button"
+                disabled={saindo}
+                accessibilityState={{
+                  disabled: saindo,
+                  busy: saindo,
+                }}
+                style={styles.menuItem}
+                onPress={() => void sair()}
+              >
+                <Ionicons
+                  name="log-out-outline"
+                  size={23}
+                  color={cores.sair}
+                />
+                <Text style={styles.logoutText}>
+                  {saindo ? 'Saindo...' : 'Sair da conta'}
+                </Text>
+              </Pressable>
+
+              <Pressable
+                accessibilityRole="button"
+                style={styles.closeButton}
+                onPress={() => setMaisAberto(false)}
+              >
+                <Text style={styles.closeText}>Fechar</Text>
+              </Pressable>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -390,15 +615,24 @@ export default function HomeScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            <Text style={styles.messageText}>{mensagem}</Text>
-
-            <Pressable
-              accessibilityRole="button"
-              style={styles.closeButton}
-              onPress={() => setMensagem('')}
+            <ScrollView
+              contentContainerStyle={styles.modalContent}
             >
-              <Text style={styles.closeText}>OK</Text>
-            </Pressable>
+              <Text
+                style={styles.messageText}
+                accessibilityLiveRegion="polite"
+              >
+                {mensagem}
+              </Text>
+
+              <Pressable
+                accessibilityRole="button"
+                style={styles.closeButton}
+                onPress={() => setMensagem('')}
+              >
+                <Text style={styles.closeText}>OK</Text>
+              </Pressable>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -406,234 +640,269 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F5F8FC',
-  },
-  loading: {
-    flex: 1,
-    backgroundColor: '#F5F8FC',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  page: {
-    flex: 1,
-    width: '100%',
-    maxWidth: 560,
-    alignSelf: 'center',
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 20,
-    paddingBottom: 30,
-  },
-  header: {
-    marginBottom: 12,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#17263E',
-    marginBottom: 2,
-  },
-  subtitle: {
-    fontSize: 15,
-    lineHeight: 22,
-    color: '#465B76',
-  },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#52647C',
-    borderRadius: 18,
-    padding: 18,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#17263E',
-    lineHeight: 25,
-    marginBottom: 4,
-  },
-  progressTrack: {
-    height: 8,
-    borderRadius: 5,
-    backgroundColor: '#D9D9D9',
-    overflow: 'hidden',
-    marginTop: 7,
-    marginBottom: 5,
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 5,
-    backgroundColor: '#FF8C28',
-  },
-  progressText: {
-    color: '#465B76',
-    fontSize: 13,
-    marginBottom: 8,
-  },
-  continueButton: {
-    alignSelf: 'flex-start',
-    minHeight: 44,
-    justifyContent: 'center',
-    backgroundColor: '#11558B',
-    borderRadius: 13,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  continueText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  disabled: {
-    opacity: 0.55,
-  },
-  sectionTitle: {
-    color: '#17263E',
-    fontSize: 18,
-    fontWeight: '600',
-    marginTop: 20,
-    marginBottom: 6,
-  },
-  orangeLine: {
-    width: 58,
-    height: 4,
-    borderRadius: 3,
-    backgroundColor: '#FF8C28',
-    marginTop: 2,
-    marginBottom: 20,
-  },
-  summaryText: {
-    color: '#17263E',
-    fontSize: 15,
-    lineHeight: 24,
-    marginBottom: 10,
-  },
-  attentionCard: {
-    paddingVertical: 8,
-  },
-  emptyAttention: {
-    minHeight: 110,
-    justifyContent: 'center',
-  },
-  emptyText: {
-    color: '#465B76',
-    fontSize: 14,
-    lineHeight: 22,
-  },
-  attentionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 20,
-  },
-  attentionText: {
-    flex: 1,
-    color: '#111111',
-    fontSize: 16,
-    fontWeight: '600',
-    lineHeight: 24,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#D9D9D9',
-  },
-  quickRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  quickCard: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#52647C',
-    borderRadius: 14,
-    padding: 14,
-    justifyContent: 'center',
-    minHeight: 78,
-    gap: 4,
-  },
-  quickText: {
-    color: '#111111',
-    fontSize: 15,
-    lineHeight: 21,
-  },
-  bottomBar: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    marginHorizontal: 8,
-    marginBottom: 6,
-    paddingVertical: 8,
-  },
-  navButton: {
-    flex: 1,
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pressed: {
-    opacity: 0.7,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.35)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  modalCard: {
-    width: '100%',
-    maxWidth: 420,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 22,
-  },
-  modalTitle: {
-    color: '#17263E',
-    fontSize: 21,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  menuItem: {
-    minHeight: 56,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E6EDF5',
-  },
-  menuText: {
-    flex: 1,
-    color: '#17263E',
-    fontSize: 16,
-  },
-  logoutText: {
-    color: '#B42318',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  closeButton: {
-    minHeight: 44,
-    alignSelf: 'flex-end',
-    justifyContent: 'center',
-    paddingHorizontal: 12,
-    marginTop: 12,
-  },
-  closeText: {
-    color: '#11558B',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  messageText: {
-    color: '#17263E',
-    fontSize: 16,
-    lineHeight: 24,
-  },
-});
+type Cores = {
+  fundo: string;
+  cartao: string;
+  texto: string;
+  secundario: string;
+  borda: string;
+  divisor: string;
+  botao: string;
+  textoBotao: string;
+  laranja: string;
+  alertaAlto: string;
+  alertaMedio: string;
+  sair: string;
+};
+
+function criarEstilos(cores: Cores, escala: number) {
+  return StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: cores.fundo,
+    },
+    loading: {
+      flex: 1,
+      backgroundColor: cores.fundo,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    page: {
+      flex: 1,
+      width: '100%',
+      maxWidth: 560,
+      alignSelf: 'center',
+    },
+    scroll: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingHorizontal: 16,
+      paddingTop: 20,
+      paddingBottom: 30,
+    },
+    header: {
+      marginBottom: 12,
+    },
+    title: {
+      fontSize: 24 * escala,
+      fontWeight: '600',
+      color: cores.texto,
+      marginBottom: 2,
+    },
+    subtitle: {
+      fontSize: 15 * escala,
+      lineHeight: 22 * escala,
+      color: cores.secundario,
+    },
+    card: {
+      backgroundColor: cores.cartao,
+      borderWidth: 1,
+      borderColor: cores.borda,
+      borderRadius: 18,
+      padding: 18,
+    },
+    cardTitle: {
+      fontSize: 18 * escala,
+      fontWeight: '600',
+      color: cores.texto,
+      lineHeight: 25 * escala,
+      marginBottom: 4,
+    },
+    progressTrack: {
+      height: 8,
+      borderRadius: 5,
+      backgroundColor: cores.divisor,
+      overflow: 'hidden',
+      marginTop: 7,
+      marginBottom: 5,
+    },
+    progressFill: {
+      height: '100%',
+      borderRadius: 5,
+      backgroundColor: cores.laranja,
+    },
+    progressText: {
+      color: cores.secundario,
+      fontSize: 13 * escala,
+      lineHeight: 20 * escala,
+      marginBottom: 8,
+    },
+    continueButton: {
+      alignSelf: 'flex-start',
+      minHeight: 44,
+      justifyContent: 'center',
+      backgroundColor: cores.botao,
+      borderRadius: 13,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+    },
+    continueText: {
+      color: cores.textoBotao,
+      fontSize: 16 * escala,
+      lineHeight: 23 * escala,
+      fontWeight: '600',
+    },
+    disabled: {
+      opacity: 0.55,
+    },
+    sectionTitle: {
+      color: cores.texto,
+      fontSize: 18 * escala,
+      lineHeight: 26 * escala,
+      fontWeight: '600',
+      marginTop: 20,
+      marginBottom: 6,
+    },
+    orangeLine: {
+      width: 58,
+      height: 4,
+      borderRadius: 3,
+      backgroundColor: cores.laranja,
+      marginTop: 2,
+      marginBottom: 20,
+    },
+    summaryText: {
+      color: cores.texto,
+      fontSize: 15 * escala,
+      lineHeight: 24 * escala,
+      marginBottom: 10,
+    },
+    attentionCard: {
+      paddingVertical: 8,
+    },
+    emptyAttention: {
+      minHeight: 110,
+      justifyContent: 'center',
+    },
+    emptyText: {
+      color: cores.secundario,
+      fontSize: 14 * escala,
+      lineHeight: 22 * escala,
+    },
+    attentionRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      paddingVertical: 20,
+    },
+    attentionText: {
+      flex: 1,
+      color: cores.texto,
+      fontSize: 16 * escala,
+      fontWeight: '600',
+      lineHeight: 24 * escala,
+    },
+    divider: {
+      height: 1,
+      backgroundColor: cores.divisor,
+    },
+    quickRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 12,
+    },
+    quickCard: {
+      flexGrow: 1,
+      flexBasis: 130,
+      backgroundColor: cores.cartao,
+      borderWidth: 1,
+      borderColor: cores.borda,
+      borderRadius: 14,
+      padding: 14,
+      justifyContent: 'center',
+      minHeight: 78,
+      gap: 4,
+    },
+    quickText: {
+      color: cores.texto,
+      fontSize: 15 * escala,
+      lineHeight: 22 * escala,
+    },
+    bottomBar: {
+      flexDirection: 'row',
+      backgroundColor: cores.cartao,
+      borderWidth: 1,
+      borderColor: cores.borda,
+      borderRadius: 18,
+      marginHorizontal: 8,
+      marginBottom: 6,
+      paddingVertical: 8,
+    },
+    navButton: {
+      flex: 1,
+      minHeight: 48,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    pressed: {
+      opacity: 0.7,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.55)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 24,
+    },
+    modalCard: {
+      width: '100%',
+      maxWidth: 420,
+      maxHeight: '90%',
+      backgroundColor: cores.cartao,
+      borderWidth: 1,
+      borderColor: cores.borda,
+      borderRadius: 18,
+      overflow: 'hidden',
+    },
+    modalContent: {
+      padding: 22,
+    },
+    modalTitle: {
+      color: cores.texto,
+      fontSize: 21 * escala,
+      fontWeight: '600',
+      marginBottom: 12,
+    },
+    menuItem: {
+      minHeight: 56,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: cores.divisor,
+      paddingVertical: 12,
+    },
+    menuText: {
+      flex: 1,
+      color: cores.texto,
+      fontSize: 16 * escala,
+      lineHeight: 24 * escala,
+    },
+    logoutText: {
+      flex: 1,
+      color: cores.sair,
+      fontSize: 16 * escala,
+      lineHeight: 24 * escala,
+      fontWeight: '600',
+    },
+    closeButton: {
+      minHeight: 44,
+      alignSelf: 'flex-end',
+      justifyContent: 'center',
+      paddingHorizontal: 12,
+      marginTop: 12,
+    },
+    closeText: {
+      color: cores.botao,
+      fontSize: 16 * escala,
+      lineHeight: 24 * escala,
+      fontWeight: '600',
+    },
+    messageText: {
+      color: cores.texto,
+      fontSize: 16 * escala,
+      lineHeight: 24 * escala,
+    },
+  });
+}

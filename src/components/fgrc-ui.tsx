@@ -178,7 +178,8 @@ export function UserGlyph({ size = 34 }: { size?: number }) {
 export function MenuOption({ title, subtitle, symbol, onPress }: {
   title: string;
   subtitle: string;
-  symbol: 'profile' | 'gear' | 'shield';
+  // [integração] 'help' = ícone de interrogação (usado no Ajuda e suporte)
+  symbol: 'profile' | 'gear' | 'shield' | 'help';
   onPress: () => void;
 }) {
   const { colors } = useFgrcTheme();
@@ -193,6 +194,10 @@ export function MenuOption({ title, subtitle, symbol, onPress }: {
         {/* escolhe o ícone de perfil engrenagem ou privacidade */}
         {symbol === 'profile' ? <UserGlyph size={27} /> : symbol === 'gear' ? (
           <Text style={{ fontSize: 29, color: colors.blue }}>⚙</Text>
+        ) : symbol === 'help' ? (
+          <View style={{ borderColor: colors.blue, borderWidth: 2, borderRadius: 14, width: 28, height: 28, justifyContent: 'center', alignItems: 'center' }}>
+            <Text style={{ fontSize: 17, fontWeight: '700', color: colors.blue }}>?</Text>
+          </View>
         ) : (
           <View style={{ borderColor: colors.blue, borderWidth: 2, borderRadius: 10, width: 26, height: 29, justifyContent: 'center', alignItems: 'center' }}>
             <Text style={{ fontSize: 17, fontWeight: '700', color: colors.blue }}>✓</Text>

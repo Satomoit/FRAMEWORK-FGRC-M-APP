@@ -1,235 +1,196 @@
 // essa barra fica no aplicativo inteiro (pra vc não depender do painel de links)
+// [integração B1] agora ela copia o desenho da barra que a Nicole fez na Home (P01)
+// assim é uma barra só pro usuário: na Home aparece a da P01, nas outras telas aparece esta, igualzinha
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { usePathname, useRouter, type Href } from "expo-router";
-import type { ReactNode } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect, type ComponentProps, type ReactNode } from "react";
+import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useFgrcTheme } from "@/components/fgrc-colors";
 
-// confere se vc ta usando o modo local pra conseguir navegar sem login
-// essa opção só funciona enquanto o projeto ta rodando em desenvolvimento
-const previewMode = __DEV__ && process.env.EXPO_PUBLIC_PREVIEW_MODE === "true";
+type NomeIcone = ComponentProps<typeof Ionicons>["name"];
 
-type Props = { children: ReactNode };
+// [integração B1] o modo EXPO_PUBLIC_PREVIEW_MODE saiu daqui
+// pq agora as telas privadas só abrem com login de verdade (o _layout.tsx confere)
+// e o _layout avisa se tem sessão pela prop "logado"
+type Props = { children: ReactNode; logado: boolean };
 
-// essas são as cinco áreas principais do app (as outras continuam como telas internas)
-const secoes = [
-  { nome: "Início", rotaPreview: "/", rotaReal: "/inicio", simbolo: "⌂" },
+// as cinco áreas principais, na mesma ordem e com os mesmos ícones da barra da P01
+// "tambem" = telas internas que deixam o mesmo botão aceso (ex: editar perfil acende Mais)
+const secoes: {
+  nome: string;
+  rota: string;
+  icone: NomeIcone;
+  tambem: string[];
+}[] = [
+  { nome: "Início", rota: "/inicio", icone: "home-outline", tambem: [] },
   {
     nome: "Avaliações",
-    rotaPreview: "/avaliacoes",
-    rotaReal: "/avaliacoes",
-    simbolo: "▤",
+    rota: "/avaliacoes",
+    icone: "clipboard-outline",
+    tambem: ["/revisar-avaliacao", "/avaliacao-finalizada"],
   },
   {
     nome: "Resultados",
-    rotaPreview: "/resultados-revisao",
-    rotaReal: "/resultados-revisao",
-    simbolo: "▥",
+    rota: "/resultados-revisao",
+    icone: "stats-chart-outline",
+    tambem: [],
   },
   {
     nome: "Relatórios",
-    rotaPreview: "/relatorios-revisao",
-    rotaReal: "/relatorios-revisao",
-    simbolo: "▧",
+    rota: "/relatorios-revisao",
+    icone: "document-text-outline",
+    tambem: [],
   },
   {
+    // antes ia pra /minhas-telas (rota de teste com seletor P07/P09)
+    // agora vai pra /mais, que abre o menu Mais da P09 direto
     nome: "Mais",
-    rotaPreview: "/minhas-telas",
-    rotaReal: "/minhas-telas",
-    simbolo: "☰",
+    rota: "/mais",
+    icone: "menu-outline",
+    tambem: [
+      "/minhas-telas",
+      "/editar-perfil",
+      "/alteracoes-salvas",
+      // [integração P11] telas da Nicole que abrem a partir do Mais
+      "/configuracoes",
+      "/alterar-senha",
+    ],
   },
-] as const;
+];
 
-export default function AppNavigation({ children }: Props) {
+// [integração B1] as únicas rotas que abrem sem login
+// (login, pedido de acesso e a confirmação dele, e as telas de senha nova da P08)
+const rotasPublicas = [
+  "/",
+  "/solicitar-acesso",
+  "/explore",
+  "/criar-nova-senha",
+  "/senha-alterada",
+  // [integração P07] Esqueci minha senha (precisa abrir sem login)
+  "/recuperar-senha",
+  // [integração] Ajuda e suporte abre também pelo Login (quem não consegue entrar precisa pedir ajuda)
+  "/suporte",
+  // [integração] ativar acesso com o código do e-mail (a pessoa ainda não tem senha)
+  "/ativar-acesso",
+];
+
+// nessas a barra não aparece: as públicas e a Home, que já tem a barra própria da P01
+// (se mostrasse aqui também ia ficar duas barras na Home)
+const rotasSemBarra = [...rotasPublicas, "/inicio"];
+
+export default function AppNavigation({ children, logado }: Props) {
   const router = useRouter();
   const caminho = usePathname();
-  const { colors } = useFgrcTheme();
+  const { colors, isDark } = useFgrcTheme();
 
-  // por enquanto o menu novo funciona na revisão local
-  // com Supabase real preservamos a navegação atual da P01 ate integrar o backend
-  const mostrarMenu = previewMode;
-  const rotaHome = previewMode ? "/" : "/inicio";
-  const estaNaHome = caminho === rotaHome;
+  // só mostra a barra com login e fora das rotas da lista de cima
+  const mostrarMenu = logado && !rotasSemBarra.includes(caminho);
 
-  // algumas páginas são internas, entao o botão Voltar precisa achar o menu principal
-  function voltar() {
-    if (router.canGoBack()) {
-      router.back();
-    } else {
-      router.replace(rotaHome as Href);
-    }
-  }
+  // [integração B1] rede de segurança: sem login, tudo que não é público fica bloqueado
+  // o Stack.Protected do _layout já barra as rotas conhecidas antes de abrir
+  // isso aqui pega o que escapar (ex: um arquivo novo em src/app que alguém esqueceu de proteger)
+  const bloqueada = !logado && !rotasPublicas.includes(caminho);
 
-  // sem modo de revisão, preserva o fluxo original da P01 até conectar o backend
-  if (!previewMode) return <>{children}</>;
+  useEffect(() => {
+    // manda pro login (o replace tira a tela bloqueada do histórico)
+    if (bloqueada) router.replace("/" as Href);
+  }, [bloqueada, router]);
 
+  // [integração B1] o cabeçalho com "‹ Voltar" saiu daqui
+  // pq as telas internas dos colegas já têm o Voltar delas (questionário, detalhes, perfil...)
+  // e ficava dois Voltar na mesma tela; pra voltar pra Home agora é o ícone Início da barra
+
+  // [integração B1] a estrutura é sempre a mesma, com ou sem barra
+  // (se trocasse o "pai" do Stack o React recriava a navegação e o Voltar do navegador perdia o histórico)
+  // sem barra o SafeAreaView fica sem margens, pq a Home e o Login já cuidam disso
   return (
     <SafeAreaView
       style={[styles.raiz, { backgroundColor: colors.background }]}
-      edges={["top", "bottom"]}
+      edges={mostrarMenu ? ["top", "bottom"] : []}
     >
-      {mostrarMenu ? (
-        <View
-          style={[
-            styles.cabecalho,
-            {
-              backgroundColor: colors.surface,
-              borderBottomColor: colors.divider,
-            },
-          ]}
-        >
-          <View style={styles.topoInterno}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Ir para o início"
-              onPress={() => router.replace(rotaHome as Href)}
-            >
-              <Text style={[styles.marca, { color: colors.text }]}>FGRC-M</Text>
-              <Text style={[styles.marcaSub, { color: colors.muted }]}>
-                Gestão de riscos cibernéticos
-              </Text>
-            </Pressable>
-            <View style={styles.topoDireita}>
-              {previewMode ? (
-                <Text style={[styles.etiqueta, { color: colors.orange }]}>
-                  DADOS LOCAIS
-                </Text>
-              ) : null}
-              {!estaNaHome ? (
-                <Pressable
-                  onPress={voltar}
-                  accessibilityRole="button"
-                  style={[styles.voltar, { borderColor: colors.border }]}
-                >
-                  <Text style={[styles.voltarTexto, { color: colors.text }]}>
-                    ‹ Voltar
-                  </Text>
-                </Pressable>
-              ) : null}
-            </View>
-          </View>
+      {/* o Stack do Expo aparece aqui (troca a tela sem sumir com a navegação) */}
+      {/* se a rota ta bloqueada a tela fica escondida até o redirecionamento terminar */}
+      <View style={[styles.tela, bloqueada && styles.escondida]}>
+        {children}
+      </View>
+      {bloqueada ? (
+        <View style={styles.carregando}>
+          <ActivityIndicator size="large" color="#11558B" accessibilityLabel="Abrindo o login" />
         </View>
       ) : null}
 
-      {/* o Stack do Expo aparece aqui (troca a tela sem sumir com a navegação) */}
-      <View style={styles.tela}>{children}</View>
-
       {mostrarMenu ? (
-        <View
-          style={[
-            styles.rodape,
-            { borderTopColor: colors.divider, backgroundColor: colors.surface },
-          ]}
-        >
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.listaMenu}
-            contentContainerStyle={styles.itensMenu}
+        <View style={styles.faixa}>
+          {/* mesmo fundo branco arredondado da barra da P01 (no escuro usa a cor de cartão do tema) */}
+          <View
+            style={[
+              styles.barra,
+              { backgroundColor: isDark ? colors.surface : "#FFFFFF" },
+            ]}
           >
             {secoes.map((secao) => {
-              const destino = previewMode ? secao.rotaPreview : secao.rotaReal;
+              // acende o botão na tela principal e nas internas da mesma área
               const selecionada =
-                caminho === destino ||
-                (secao.nome === "Mais" &&
-                  (caminho === "/editar-perfil" ||
-                    caminho === "/alteracoes-salvas"));
+                caminho === secao.rota || secao.tambem.includes(caminho);
               return (
                 <Pressable
                   key={secao.nome}
                   accessibilityRole="tab"
-                  accessibilityState={{ selected: selecionada }}
                   accessibilityLabel={secao.nome}
-                  onPress={() => router.replace(destino as Href)}
+                  accessibilityState={{ selected: selecionada }}
+                  onPress={() => {
+                    // navigate volta pra tela se ela já tiver aberta no histórico (ex: Início)
+                    // e só abre uma nova se não tiver (assim não empilha várias Homes)
+                    // se vc já ta na tela principal dessa área não faz nada
+                    if (caminho !== secao.rota) {
+                      router.navigate(secao.rota as Href);
+                    }
+                  }}
                   style={({ pressed }) => [
-                    styles.aba,
-                    {
-                      backgroundColor: selecionada
-                        ? colors.selected
-                        : "transparent",
-                      opacity: pressed ? 0.7 : 1,
-                    },
+                    styles.botao,
+                    pressed && styles.pressionado,
                   ]}
                 >
-                  <Text
-                    style={[
-                      styles.icone,
-                      { color: selecionada ? colors.blue : colors.muted },
-                    ]}
-                  >
-                    {secao.simbolo}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.abaTexto,
-                      { color: selecionada ? colors.blue : colors.text },
-                    ]}
-                  >
-                    {secao.nome}
-                  </Text>
+                  {/* laranja no selecionado, igual à P01 */}
+                  <Ionicons
+                    name={secao.icone}
+                    size={27}
+                    color={
+                      selecionada ? "#FF8C28" : isDark ? colors.text : "#111111"
+                    }
+                  />
                 </Pressable>
               );
             })}
-          </ScrollView>
+          </View>
         </View>
       ) : null}
     </SafeAreaView>
   );
 }
 
+// medidas copiadas de bottomBar e navButton da HomeScreen.tsx (P01)
+// a faixa limita a largura igual ao "page" da Home (fica bonito no computador também)
 const styles = StyleSheet.create({
   raiz: { flex: 1 },
-  cabecalho: { borderBottomWidth: 1 },
-  topoInterno: {
-    width: "100%",
-    maxWidth: 1100,
-    alignSelf: "center",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 8,
-    minHeight: 68,
-    paddingVertical: 9,
-    paddingHorizontal: 18,
-  },
-  marca: { fontSize: 20, fontWeight: "800", letterSpacing: 0.2 },
-  marcaSub: { fontSize: 11, marginTop: 2 },
-  topoDireita: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    justifyContent: "flex-end",
-    gap: 8,
-  },
-  etiqueta: { fontSize: 10, fontWeight: "800" },
-  voltar: {
-    borderWidth: 1,
-    borderRadius: 10,
-    minHeight: 36,
-    paddingHorizontal: 12,
-    justifyContent: "center",
-  },
-  voltarTexto: { fontSize: 13, fontWeight: "700" },
   tela: { flex: 1, minHeight: 0 },
-  rodape: { borderTopWidth: 1 },
-  listaMenu: { flexGrow: 0, maxHeight: 76, alignSelf: "center", width: "100%" },
-  itensMenu: {
-    flexGrow: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    gap: 4,
+  escondida: { display: "none" },
+  carregando: { flex: 1, alignItems: "center", justifyContent: "center" },
+  faixa: { width: "100%", maxWidth: 560, alignSelf: "center" },
+  barra: {
+    flexDirection: "row",
+    borderRadius: 18,
+    marginHorizontal: 8,
+    marginBottom: 6,
+    paddingVertical: 8,
   },
-  aba: {
-    minWidth: 80,
-    minHeight: 60,
-    paddingHorizontal: 8,
-    borderRadius: 12,
+  botao: {
+    flex: 1,
+    minHeight: 48,
     alignItems: "center",
     justifyContent: "center",
   },
-  icone: { fontSize: 19, marginBottom: 2 },
-  abaTexto: { fontSize: 11, fontWeight: "700" },
+  pressionado: { opacity: 0.7 },
 });

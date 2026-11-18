@@ -18,6 +18,8 @@ export interface Report {
   // acrescentamos isso pra P06 conseguir escrever o PDF com todas as questões
   answers?: RespostaRegistrada[];
   finalizedAt?: string;
+  // [integração] prefeitura/município/UF da conta que ta logada (vai no cabeçalho do PDF)
+  prefeitura?: string | null;
 }
 
 export interface Recommendation {

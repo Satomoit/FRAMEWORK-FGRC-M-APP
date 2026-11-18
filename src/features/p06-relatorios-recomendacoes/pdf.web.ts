@@ -2,6 +2,14 @@
 // o arquivo pdf.ts continua cuidando do PDF no Android/iOS
 import { PDFDocument, StandardFonts, rgb, type PDFFont } from 'pdf-lib';
 import type { Recommendation, Report } from './types';
+// [integração] nota máxima, referência, data/hora e explicação do cálculo saem do mesmo lugar das telas
+import {
+  EXPLICACAO_DO_CALCULO,
+  comLetraMaiuscula,
+  dataHoraDa,
+  textoReferencia,
+  valorMaximoDa,
+} from '@/lib/calcular-relatorio';
 
 const LARGURA = 595.28; // página A4 em pontos
 const ALTURA = 841.89;
@@ -119,39 +127,49 @@ export async function generateReportPdf(
   }
 
   // informações gerais dessa avaliação (sem inventar números)
-  escrever('FGRC-M | Relatório de avaliação cibernética', 16, true, 12);
-  escrever(`Avaliação: ${report.id} | Data: ${report.date}`);
-  escrever(`Índice de exposição: ${report.score}/100 | Classificação: ${report.classification}`, 11, true, 12);
-  escrever('Observação: os critérios de pontuação seguem a implementação do MVP e devem ser validados com a equipe/orientador.', 9);
+  escrever('FGRC-M | Relatório da avaliação de segurança cibernética', 16, true, 12);
+  // [integração] cabeçalho com prefeitura, data e hora certas e o código da avaliação
+  if (report.prefeitura) escrever(report.prefeitura, 11, true, 4);
+  escrever(`Data da avaliação: ${report.finalizedAt ? dataHoraDa(report.finalizedAt) : report.date}`, 10, false, 2);
+  escrever(`Código da avaliação: ${report.id}`, 9);
+  escrever(`Resultado geral: ${report.score} de 100 (${report.classification})`, 12, true, 8);
+  escrever(EXPLICACAO_DO_CALCULO, 9, false, 12);
 
   if (report.dimensions?.length) {
-    escrever('Resultados por eixo', 13, true);
+    escrever('Resultado por eixo', 13, true);
     for (const eixo of report.dimensions) {
-      escrever(`${eixo.code} - ${eixo.name}: ${eixo.score}/100`);
+      escrever(`${eixo.name} (${eixo.code}): ${eixo.score} de 100`, 10, false, 3);
     }
+    y -= 8;
   }
 
-  escrever(`Todas as perguntas e respostas (${report.answers.length})`, 13, true);
+  escrever(`Perguntas e respostas (${report.answers.length})`, 13, true);
   report.answers.forEach((resposta, indice) => {
-    escrever(`${indice + 1}. ${resposta.codigo} - ${resposta.eixo}`, 11, true, 2);
+    escrever(`${indice + 1}. ${resposta.eixo} (${resposta.codigo})`, 11, true, 2);
     escrever(`Pergunta: ${resposta.pergunta}`);
-    escrever(`Resposta: ${resposta.valor}/4 - ${resposta.alternativa}. ${resposta.descricao}`);
-    escrever(`Referência: ${resposta.nist}`);
+    // [integração] mostra a nota sobre o máximo real da pergunta (AWR vai até 3)
+    escrever(`Resposta: ${resposta.alternativa} (nota ${resposta.valor} de ${valorMaximoDa(resposta)}). ${comLetraMaiuscula(resposta.descricao)}`);
     escrever(resposta.recomendacao
       ? `Recomendação: ${resposta.recomendacao}`
-      : 'Sem recomendação corretiva cadastrada para esta resposta', 10, false, 13);
+      : 'Recomendação: nenhuma. A prática já está no nível mais alto.');
+    escrever(`Referência: ${textoReferencia(resposta.nist)}`, 9, false, 14);
   });
 
-  escrever(`Recomendações prioritárias (${recs.length})`, 13, true);
-  if (!recs.length) escrever('Nenhuma recomendação corretiva registrada');
-  for (const rec of recs) {
-    escrever(`${rec.code} (${rec.priority}): ${rec.solution}`);
+  // resumo no fim: primeiro as de prioridade alta (notas 0 e 1), depois as de prioridade média (notas 2 e 3)
+  escrever(`Resumo das recomendações (${recs.length})`, 13, true);
+  if (!recs.length) escrever('Nenhuma recomendação. Todas as práticas estão no nível mais alto.');
+  else escrever('Prioridade alta: respostas com nota 0 ou 1. Prioridade média: respostas com nota 2 ou 3.', 9, false, 8);
+  for (const prioridade of ['alta', 'média'] as const) {
+    for (const rec of recs.filter(r => r.priority === prioridade)) {
+      escrever(`${rec.code} - prioridade ${rec.priority}: ${rec.solution}`);
+    }
   }
 
   // numera as páginas pra facilitar a leitura do relatório inteiro
   pdf.getPages().forEach((p, indice) => {
-    p.drawText(`${indice + 1} / ${pdf.getPageCount()}`, {
-      x: LARGURA - MARGEM - 50, y: 25, size: 9, font: fonte, color: texto,
+    const rodape = `Página ${indice + 1} de ${pdf.getPageCount()}`;
+    p.drawText(rodape, {
+      x: LARGURA - MARGEM - fonte.widthOfTextAtSize(rodape, 9), y: 25, size: 9, font: fonte, color: texto,
     });
   });
 
@@ -160,7 +178,10 @@ export async function generateReportPdf(
   const dados = new ArrayBuffer(bytes.byteLength);
   new Uint8Array(dados).set(bytes);
   const url = URL.createObjectURL(new Blob([dados], { type: 'application/pdf' }));
-  const nome = `FGRC-M-avaliacao-${String(report.date).replace(/[^0-9a-z-]/gi, '-')}.pdf`;
+  // [integração] nome do arquivo com data e hora (assim duas avaliações do mesmo dia não ficam com nome igual)
+  const quando = report.finalizedAt ? new Date(report.finalizedAt) : null;
+  const hora = quando ? `-${String(quando.getHours()).padStart(2, '0')}h${String(quando.getMinutes()).padStart(2, '0')}` : '';
+  const nome = `FGRC-M-avaliacao-${String(report.date).replace(/[^0-9a-z-]/gi, '-')}${hora}.pdf`;
   const link = document.createElement('a');
   link.href = url;
   link.download = nome;

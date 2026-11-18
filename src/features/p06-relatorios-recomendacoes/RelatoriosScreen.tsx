@@ -1,6 +1,6 @@
 // Tela 15 - Relatórios
 import React, { useState } from 'react';
-import { Alert, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { generateReportPdf } from './pdf';
 import { colors, radius } from './theme';
@@ -14,6 +14,8 @@ interface Props {
 
 export function RelatoriosScreen({ reports, recommendationsFor, onOpenReport }: Props) {
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  // [integração] aviso que aparece na própria tela (o Alert não aparece no navegador)
+  const [aviso, setAviso] = useState('');
 
   async function handlePdf(report: Report) {
     try {
@@ -21,21 +23,46 @@ export function RelatoriosScreen({ reports, recommendationsFor, onOpenReport }: 
       await generateReportPdf(report, recommendationsFor(report));
     } catch {
       Alert.alert('Erro', 'Não foi possível gerar o PDF. Tente novamente.');
+      // [integração] no navegador o Alert não aparece, então mostra aqui também
+      setAviso('Não foi possível gerar o PDF. Tente novamente.');
     } finally {
       setLoadingId(null);
     }
   }
 
-  function handleShare(report: Report) {
-    Share.share({
-      message: `FGRC-M • Avaliação de ${report.date}: ${report.index} ${report.score}/100 (${report.classification}).`,
-    });
+  // [integração] o Share do React Native não existe no navegador e derrubava a tela
+  // no celular continua igual; no navegador usa o compartilhar do próprio navegador
+  // e se ele não tiver, copia o resumo pra vc colar onde quiser
+  async function handleShare(report: Report) {
+    const message = `FGRC-M • Avaliação de ${report.date}: ${report.index} ${report.score}/100 (${report.classification}).`;
+    setAviso('');
+    try {
+      if (Platform.OS !== 'web') {
+        await Share.share({ message });
+        return;
+      }
+      const nav = globalThis.navigator as Navigator | undefined;
+      if (nav?.share) {
+        await nav.share({ text: message });
+      } else if (nav?.clipboard) {
+        await nav.clipboard.writeText(message);
+        setAviso('Resumo copiado. Agora é só colar onde você quiser. Para enviar o relatório completo, use Baixar PDF.');
+      } else {
+        setAviso('Este navegador não permite compartilhar. Use Baixar PDF e envie o arquivo.');
+      }
+    } catch (erro) {
+      // se a pessoa fechar a janela de compartilhar não é erro, então não mostra nada
+      if (erro instanceof Error && erro.name === 'AbortError') return;
+      setAviso('Não foi possível compartilhar agora. Use Baixar PDF e envie o arquivo.');
+    }
   }
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Relatórios</Text>
       <Text style={styles.subtitle}>Consulte e exporte os relatórios das avaliações municipais.</Text>
+      {/* [integração] avisos de PDF e compartilhar (aparecem também no navegador) */}
+      {aviso ? <Text style={styles.subtitle} accessibilityLiveRegion="polite">{aviso}</Text> : null}
 
       {/* só entram relatórios de avaliações salvas */}
       {reports.length === 0 ? <Text style={styles.subtitle}>Nenhum relatório ainda. Finalize uma avaliação para gerar o PDF.</Text> : null}
