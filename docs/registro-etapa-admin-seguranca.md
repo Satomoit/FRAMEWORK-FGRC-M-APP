@@ -28,6 +28,10 @@ Legenda da coluna "Original": de quem é o arquivo. Nos arquivos de integrantes,
 | 15 | "ç" e letras com acento contavam como símbolo, mas o Supabase não aceita | `src/lib/politica-senha.ts` | Integração | Símbolo = mesma lista do Supabase | `teste-senha` (2 casos) | Aprovado |
 | 16 | Conta desativada via "Verifique sua conexão" ao entrar | `LoginScreen.tsx` | P01 Nicole | Mensagem "Esta conta está desativada. Fale com o suporte." | CT32 | Não executado |
 | 17 | RF-008 e RNF-012 sem teste automático | `tests/teste-calculo.cjs` | Integração | Casos novos | `npm test` | Aprovado |
+| 18 | Aprovar por e-mail falha sem SMTP e a mensagem não dizia o motivo | `supabase/functions/admin-fgrcm/index.ts` | Integração | Mensagens por tipo de erro (SMTP não configurado, e-mail inválido, limite por hora) | Captura da responsável (erro de SMTP) | Comportamento esperado sem SMTP |
+| 19 | Sem jeito de aprovar quando o e-mail não funciona, além da senha provisória | `admin-fgrcm`, `src/lib/admin.ts`, `AbaSolicitacoes.tsx`, `AcessoDaPessoa.tsx` (novo) | Integração | "Aprovar com código de ativação": o servidor gera o código (sem mandar e-mail) e a administração passa para a pessoa | CT37 | Não executado |
+| 20 | Pessoa que perdeu a senha provisória ou o código ficava sem acesso | `admin-fgrcm` (ação `novo_acesso`), `AcessoDaPessoa.tsx`, `AbaContas.tsx`, `AbaSolicitacoes.tsx` | Integração | "Novo acesso": novo código, nova senha provisória ou código por e-mail. O anterior para de funcionar. Fica no histórico do pedido. Não vale para contas de admin nem desativadas | CT38 | Não executado |
+| 21 | Textos da tela Ativar acesso falavam só de e-mail | `src/app/ativar-acesso.tsx` | Integração | Textos falam de "código" (por e-mail ou da administração); ao criar a senha, desliga o aviso de senha provisória | CT37 | Não executado |
 
 ## 2. O que continua igual de propósito
 
@@ -43,5 +47,6 @@ Legenda da coluna "Original": de quem é o arquivo. Nos arquivos de integrantes,
 |---|---|---|
 | madrugada | Migração `fgrcm_admin_auditoria` aplicada | Não. Só criou tabelas, colunas, funções e gatilhos; trocou os valores aceitos no status do suporte (a mensagem existente estava como `aberto`, que continua válido) |
 | madrugada | Função `admin-fgrcm` publicada (versão 1) | Não |
+| manhã (08h21) | Função `admin-fgrcm` versão 2: aprovar com código, novo acesso, mensagens de erro de e-mail | Não. As ações antigas continuam iguais |
 | madrugada | Função `aprovar-pedido` substituída por uma que só responde 410 (versão 2) | Desliga a função antiga |
 | cerca de 01h40 | Teste `teste-rls-admin.sql` executado em transação desfeita | Não. Contagem das tabelas igual antes e depois |

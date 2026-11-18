@@ -70,6 +70,9 @@ Situações possíveis (do plano acadêmico): **Aprovado**, **Reprovado**, **Blo
 | CT34 | Segurança | — | Rodar `supabase/tests/teste-rls-admin.sql` no SQL Editor | As 28 linhas com "obtido" igual a "esperado"; nenhum dado fica no banco |
 | CT35 | Privacidade | — | Login > Privacidade e termos; Mais > Privacidade e termos | Texto abre nos dois caminhos e descreve o que fica no aparelho e o que vai para o servidor |
 | CT36 | RNF-002 | Avaliação finalizada | No navegador, F12 > Rede. Responder e finalizar uma avaliação e gerar o PDF | Nenhuma requisição ao Supabase leva as respostas (só autenticação) |
+| CT37 | Admin | Pedido pendente | 1. Abrir o pedido. 2. Aprovar com código de ativação. 3. No app (outro aparelho ou janela anônima): Login > Ativar acesso > e-mail + código. 4. Criar senha | Código de 6 números aparece uma vez com "Copiar mensagem pronta"/"Enviar para a pessoa"; a pessoa cria a senha e abre a Home |
+| CT38 | Admin | Pedido aprovado (CT25 ou CT37) | 1. Abrir o pedido aprovado (ou aba Contas). 2. Novo acesso > Gerar código. 3. Tentar o código antigo. 4. Usar o novo. 5. Novo acesso > Gerar nova senha provisória > confirmar | Código antigo recusado; novo funciona; senha provisória nova funciona e o app pede para trocar; histórico do pedido mostra cada geração |
+| CT39 | Admin, P07 | Gmail configurado no Supabase (`docs/configurar-email-gmail-supabase.md`) | 1. Aprovar e enviar código por e-mail para um Gmail. 2. Ativar acesso com o código do e-mail. 3. Esqueci minha senha com a mesma conta | Os dois e-mails chegam (ver spam); código e link funcionam |
 
 ## 5. Fluxo completo
 

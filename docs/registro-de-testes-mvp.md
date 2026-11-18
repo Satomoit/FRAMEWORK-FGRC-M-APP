@@ -149,5 +149,19 @@ Preencher depois de executar. Campos do plano acadêmico: responsável, data, am
 | CT34 | Claude | 18/11/2026 | Supabase do grupo | 28 de 28 iguais ao esperado (seção 1.1) | Aprovado | Seção 1.1 |
 | CT35 | | | | | Não executado | |
 | CT36 | | | | | Não executado | |
+| CT37 | | | | | Não executado | |
+| CT38 | | | | | Não executado | |
+| CT39 | | | | | Não executado | |
+
+### Evidências recebidas em 18/11/2026 (manhã)
+
+Capturas enviadas pela responsável, no navegador do computador, com a conta admin `admfgrc@teste.com`. Ficam registradas aqui como evidência; a situação final de cada CT é preenchida por ela depois de repetir o cenário completo.
+
+| Cenário | O que a captura mostra | Parte do resultado esperado coberta |
+|---|---|---|
+| CT23 | Painel aberto com as abas Solicitações de acesso, Mensagens de suporte, Contas e Segurança, e "Conectada como admfgrc@teste.com" | Painel com as quatro abas |
+| CT25 | Pedido "Aprovada" com Decidido por `admfgrc@teste.com`, Decidido em 18/11/2026 às 08:13, Enviado pelo navegador e histórico "Pendente → Aprovada" | Quem decidiu, quando e histórico |
+| CT33 (início) | Aba Segurança com QR code e chave para o aplicativo autenticador | Etapas 1 e 2 (cadastro não concluído na captura) |
+| Aprovar por e-mail sem SMTP | Mensagem "Não foi possível enviar o convite. Confira o envio de e-mail (SMTP)..." | Comportamento esperado enquanto o Gmail não está configurado |
 
 Observação: durante o desenvolvimento, a responsável enviou capturas do navegador com telas funcionando (Alterar senha e "Senha alterada!", validação da senha forte, PDFs gerados a partir de avaliações reais). Eram versões anteriores do código, então esses cenários não foram marcados como aprovados aqui: precisam ser repetidos na versão final.

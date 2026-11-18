@@ -8,6 +8,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { useFgrcTheme } from '@/components/fgrc-colors';
 import { FgrcButton, Notice } from '@/components/fgrc-ui';
 import { alterarConta, listarContas, type ContaCadastrada } from '@/lib/admin';
+import { NovoAcesso } from './AcessoDaPessoa';
 import { CampoBusca, Cartao, Etiqueta, Filtros, Linha, TextoVazio, combinaBusca, dataHora } from './ui-admin';
 
 type Filtro = 'ativas' | 'desativadas' | 'todas';
@@ -88,6 +89,8 @@ export default function AbaContas() {
           <Linha rotulo="Município / Estado" valor={c.municipio || c.estado ? `${c.municipio ?? '—'} / ${c.estado ?? '—'}` : null} />
           <Linha rotulo="Conta criada em" valor={dataHora(c.criado_em)} />
           <Linha rotulo="Último acesso" valor={c.ultimo_acesso ? dataHora(c.ultimo_acesso) : 'ainda não entrou'} />
+          {/* [integração] perdeu a senha provisória ou o código? gera outro daqui (contas ativas, não admin) */}
+          {!c.admin && !c.desativado ? <NovoAcesso email={c.email} userId={c.id} /> : null}
           {/* contas de admin não são alteradas por aqui (só pelo painel do Supabase) */}
           {!c.admin ? (
             confirmando === c.id ? (

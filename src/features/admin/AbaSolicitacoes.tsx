@@ -16,6 +16,7 @@ import {
   type RegistroHistorico,
   type StatusPedido,
 } from '@/lib/admin';
+import { CaixaDeAcesso, NovoAcesso, type AcessoGerado } from './AcessoDaPessoa';
 import { CampoBusca, Cartao, Etiqueta, Filtros, Linha, TextoVazio, combinaBusca, dataHora } from './ui-admin';
 
 type Filtro = StatusPedido | 'todos';
@@ -35,8 +36,8 @@ export default function AbaSolicitacoes() {
   const [recusando, setRecusando] = useState(false);
   const [motivo, setMotivo] = useState('');
   const [ocupado, setOcupado] = useState(false);
-  // a senha provisória aparece uma vez só, logo depois de aprovar
-  const [senhaCriada, setSenhaCriada] = useState<{ email: string; senha: string } | null>(null);
+  // a senha provisória ou o código aparece uma vez só, logo depois de aprovar
+  const [acessoCriado, setAcessoCriado] = useState<AcessoGerado | null>(null);
 
   // pega os pedidos que chegaram no banco
   const carregar = useCallback(async () => {
@@ -67,7 +68,7 @@ export default function AbaSolicitacoes() {
     try { setHistorico(await historicoDoRegistro(p.id)); } catch { /* histórico é complemento: se falhar a tela continua */ }
   }
 
-  async function decidir(acao: 'senha' | 'convite' | 'recusar') {
+  async function decidir(acao: 'senha' | 'codigo' | 'convite' | 'recusar') {
     if (!aberto || ocupado) return;
     setOcupado(true);
     setAviso(null);
@@ -78,7 +79,8 @@ export default function AbaSolicitacoes() {
       } else {
         const r = await aprovarPedido(aberto.id, acao);
         setAviso({ texto: r.mensagem, tipo: 'success' });
-        if (r.senhaProvisoria) setSenhaCriada({ email: aberto.email, senha: r.senhaProvisoria });
+        if (r.senhaProvisoria) setAcessoCriado({ email: aberto.email, tipo: 'senha', valor: r.senhaProvisoria });
+        if (r.codigo) setAcessoCriado({ email: aberto.email, tipo: 'codigo', valor: r.codigo });
       }
       setAberto(null);
       await carregar();
@@ -92,19 +94,7 @@ export default function AbaSolicitacoes() {
 
   if (carregando) return <ActivityIndicator size="large" style={styles.carregando} />;
 
-  const caixaSenha = senhaCriada ? (
-    <View style={[styles.senhaCaixa, { borderColor: colors.blue, backgroundColor: colors.infoBackground }]}>
-      <Text style={[styles.titulo, { color: colors.text }]}>Senha provisória de {senhaCriada.email}</Text>
-      <Text selectable style={[styles.senha, { color: colors.text }]}>{senhaCriada.senha}</Text>
-      <Text style={{ color: colors.muted }}>
-        Anote agora: ela não aparece de novo. Passe para a pessoa por telefone ou pessoalmente.
-        No primeiro acesso o app pede para ela criar uma senha nova.
-      </Text>
-      <Pressable accessibilityRole="button" onPress={() => setSenhaCriada(null)}>
-        <Text style={[styles.link, { color: colors.blue }]}>Já anotei</Text>
-      </Pressable>
-    </View>
-  ) : null;
+  const caixaSenha = acessoCriado ? <CaixaDeAcesso acesso={acessoCriado} onFechar={() => setAcessoCriado(null)} /> : null;
 
   // ---------- detalhe de um pedido ----------
   if (aberto) {
@@ -134,10 +124,13 @@ export default function AbaSolicitacoes() {
         {aberto.status === 'pendente' && !recusando ? (
           <View style={styles.acoes}>
             <FgrcButton label={ocupado ? 'Aguarde...' : 'Aprovar com senha provisória'} disabled={ocupado} onPress={() => { void decidir('senha'); }} />
+            {/* [integração] código que a administração passa pra pessoa (WhatsApp, telefone): funciona sem e-mail */}
+            <FgrcButton label="Aprovar com código de ativação" variant="outlined" disabled={ocupado} onPress={() => { void decidir('codigo'); }} />
             <FgrcButton label="Aprovar e enviar código por e-mail" variant="outlined" disabled={ocupado} onPress={() => { void decidir('convite'); }} />
             <FgrcButton label="Recusar" variant="danger" disabled={ocupado} onPress={() => setRecusando(true)} />
             <Text style={[styles.dica, { color: colors.muted }]}>
-              O código por e-mail só funciona com o envio de e-mail (SMTP) configurado no Supabase.
+              Senha provisória e código de ativação aparecem na tela para você passar à pessoa.
+              O envio por e-mail só funciona com o SMTP configurado no Supabase.
             </Text>
           </View>
         ) : null}
@@ -158,11 +151,24 @@ export default function AbaSolicitacoes() {
           </View>
         ) : null}
 
+        {/* [integração] pedido aprovado: dá pra gerar um acesso novo se a pessoa perdeu a senha ou o código */}
+        {aberto.status === 'aprovado' ? (
+          <View style={styles.acoes}>
+            <NovoAcesso
+              email={aberto.email}
+              pedidoId={aberto.id}
+              onGerado={() => { historicoDoRegistro(aberto.id).then(setHistorico).catch(() => {}); }}
+            />
+          </View>
+        ) : null}
+
         <Text style={[styles.titulo, { color: colors.text }]}>Histórico</Text>
         {historico.length === 0 ? <TextoVazio>Nenhuma decisão registrada ainda.</TextoVazio> : null}
         {historico.map(h => (
           <Text key={h.id} style={[styles.historico, { color: colors.text }]}>
-            {dataHora(h.criado_em)}: {NOME_STATUS_PEDIDO[h.de as StatusPedido] ?? h.de ?? '—'} → {NOME_STATUS_PEDIDO[h.para as StatusPedido] ?? h.para ?? '—'} ({h.admin_email ?? 'administração'})
+            {h.acao.startsWith('acesso_')
+              ? `${dataHora(h.criado_em)}: ${h.para ?? 'novo acesso'} (${h.admin_email ?? 'administração'})`
+              : `${dataHora(h.criado_em)}: ${NOME_STATUS_PEDIDO[h.de as StatusPedido] ?? h.de ?? '—'} → ${NOME_STATUS_PEDIDO[h.para as StatusPedido] ?? h.para ?? '—'} (${h.admin_email ?? 'administração'})`}
           </Text>
         ))}
       </View>
@@ -217,6 +223,4 @@ const styles = StyleSheet.create({
   dica: { fontSize: 13 },
   motivo: { borderWidth: 1, borderRadius: 10, padding: 12, fontSize: 15, minHeight: 44 },
   historico: { fontSize: 14, marginBottom: 4 },
-  senhaCaixa: { borderWidth: 1, borderRadius: 14, padding: 14, marginBottom: 12, gap: 4 },
-  senha: { fontSize: 26, fontWeight: '800', letterSpacing: 1, marginVertical: 6 },
 });

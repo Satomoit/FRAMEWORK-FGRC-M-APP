@@ -5,6 +5,8 @@
 //      (Authentication > Users > Invite user). O Supabase manda um e-mail com um código
 //   3. a pessoa abre esta tela, digita o e-mail e o código, e cria a senha dela
 // assim ninguém entra sem a administração aprovar, e o e-mail é confirmado pelo código
+// [integração] agora o código também pode vir direto da administração (área /admin > "Aprovar com
+// código de ativação" ou "Novo acesso"), sem depender de e-mail. A tela funciona igual pros dois
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -46,7 +48,7 @@ export default function AtivarAcesso() {
     const problema = problemaNoEmailInstitucional(emailLimpo);
     if (problema) { setErro(problema); return; }
     if (codigoLimpo.length < 6 || codigoLimpo.length > 10) {
-      setErro('Digite o código de 6 a 8 números que chegou no seu e-mail.');
+      setErro('Digite o código de 6 a 8 números que você recebeu.');
       return;
     }
 
@@ -91,7 +93,8 @@ export default function AtivarAcesso() {
       }
       // mesmo se o e-mail não tiver sido aprovado, mostra a mesma mensagem
       // (assim ninguém consegue descobrir quais e-mails têm conta)
-      setAviso('Se o seu acesso já foi aprovado, um código novo vai chegar no seu e-mail em alguns minutos. Veja também a pasta de spam.');
+      // [integração] se o e-mail não chegar, a administração consegue gerar um código novo no /admin
+      setAviso('Se o seu acesso já foi aprovado, um código novo vai chegar no seu e-mail em alguns minutos. Veja também a pasta de spam. Se não chegar, fale com o suporte para a administração gerar um código novo.');
     } catch {
       setErro('Sem conexão. Verifique a internet e tente de novo.');
     } finally {
@@ -109,7 +112,8 @@ export default function AtivarAcesso() {
 
     setOcupado(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password: senha });
+      // senha_provisoria: false = se a pessoa tinha uma senha provisória, o app para de pedir pra trocar
+      const { error } = await supabase.auth.updateUser({ password: senha, data: { senha_provisoria: false } });
       if (error) {
         setErro(error.code === 'weak_password' ? REGRA_SENHA_TEXTO : 'Não foi possível salvar a senha. Tente de novo.');
         return;
@@ -142,12 +146,12 @@ export default function AtivarAcesso() {
   return (
     <Page
       title="Ativar acesso"
-      subtitle="Quando a administração aprovar o seu pedido, você recebe um e-mail com um código. Digite o código aqui para criar sua senha."
+      subtitle="Quando a administração aprovar o seu pedido, você recebe um código (por e-mail ou direto da administração). Digite o código aqui para criar sua senha."
       onBack={voltar}
     >
       <View style={styles.bloco}>
         <FormField label="E-mail institucional" email value={email} onChangeText={v => { setEmail(v); setErro(''); }} placeholder="Digite o e-mail do pedido..." />
-        <FormField label="Código do e-mail" value={codigo} onChangeText={v => { setCodigo(v); setErro(''); }} placeholder="Ex: 123456" />
+        <FormField label="Código de ativação" value={codigo} onChangeText={v => { setCodigo(v); setErro(''); }} placeholder="Ex: 123456" />
         {erro ? <Notice message={erro} kind="error" /> : null}
         {aviso ? <Notice message={aviso} kind="success" onClose={() => setAviso('')} /> : null}
         <FgrcButton label={ocupado ? 'Aguarde...' : 'Confirmar código'} disabled={ocupado} onPress={() => { void confirmarCodigo(); }} />

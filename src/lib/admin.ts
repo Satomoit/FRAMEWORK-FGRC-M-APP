@@ -108,9 +108,18 @@ async function chamarFuncaoAdmin<T>(corpo: Record<string, unknown>): Promise<T> 
   return data as T;
 }
 
-// aprovar com senha provisória (padrão, não precisa de e-mail) ou por convite (precisa do SMTP)
-export function aprovarPedido(pedidoId: string, modo: 'senha' | 'convite') {
-  return chamarFuncaoAdmin<{ mensagem: string; senhaProvisoria: string | null }>({ acao: 'aprovar', pedidoId, modo });
+// aprovar com:
+//   'senha'   = senha provisória (não precisa de e-mail)
+//   'codigo'  = código de ativação que a administração passa pra pessoa (não precisa de e-mail)
+//   'convite' = o Supabase manda o código por e-mail (precisa do SMTP configurado)
+export function aprovarPedido(pedidoId: string, modo: 'senha' | 'codigo' | 'convite') {
+  return chamarFuncaoAdmin<{ mensagem: string; senhaProvisoria: string | null; codigo: string | null }>({ acao: 'aprovar', pedidoId, modo });
+}
+
+// [integração] novo acesso pra quem perdeu a senha provisória ou o código
+// manda o userId (aba Contas) ou o e-mail (tela do pedido); o pedidoId faz o registro aparecer no histórico do pedido
+export function novoAcesso(dados: { modo: 'senha' | 'codigo' | 'email'; userId?: string; email?: string; pedidoId?: string }) {
+  return chamarFuncaoAdmin<{ mensagem: string; senhaProvisoria?: string; codigo?: string }>({ acao: 'novo_acesso', ...dados });
 }
 
 export function recusarPedido(pedidoId: string, motivo: string) {

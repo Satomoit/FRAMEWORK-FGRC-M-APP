@@ -50,6 +50,7 @@
 | Item | Implementado | Arquivos | Teste |
 |---|---|---|---|
 | Área administrativa: solicitações pendentes, aceitar ou recusar com motivo | Sim | `src/features/admin/*`, `supabase/functions/admin-fgrcm` | R01–R28, F01–F03; CT23–CT28 |
+| Área administrativa: aprovar com código de ativação e gerar novo acesso (código ou senha) | Sim | `AcessoDaPessoa.tsx`, ação `novo_acesso` em `admin-fgrcm` | CT37, CT38 |
 | Área administrativa: usuários cadastrados e ativos (nome, e-mail, prefeitura, município, estado, situação) | Sim | `AbaContas.tsx` | CT32 |
 | Status da solicitação (em análise, aprovada, recusada) | Sim | `src/app/situacao-pedido.tsx`, `situacao_do_pedido()` | R05, F08; CT31 |
 | Home com o nome do usuário | Sim | `HomeScreen.tsx`, `resumo-inicio.ts` | `teste-resumo-inicio`; CT01 |
