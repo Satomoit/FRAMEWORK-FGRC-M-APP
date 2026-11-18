@@ -9,6 +9,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import AvaliacoesScreen from '@/features/p03-avaliacoes-questionario/AvaliacoesScreen';
 import QuestionarioScreen from '@/features/p03-avaliacoes-questionario/QuestionarioScreen';
 import { finalizarAvaliacao } from '@/lib/avaliacoes-reais';
+import { prefeituraDaSessao } from '@/lib/conta';
 // esse rascunho é local e separado por conta (não manda as respostas pra prefeitura nem pro Supabase)
 import { lerRascunho, limparRascunho, salvarRascunho, type Respostas } from '@/lib/armazenamento-local';
 
@@ -71,7 +72,10 @@ Avaliação em andamento: as respostas são salvas neste aparelho; ao finalizar,
           onFinalizarAvaliacao={async () => {
             // a finalização só dá certo se todas as respostas forem gravadas no histórico
             try {
-              await finalizarAvaliacao(respostas);
+              // [integração RF-003] grava a prefeitura da conta junto (só no aparelho, igual as respostas)
+              // se não conseguir ler, finaliza do mesmo jeito, só sem a prefeitura
+              const prefeitura = await prefeituraDaSessao().catch(() => null);
+              await finalizarAvaliacao(respostas, prefeitura);
               await limparRascunho();
               setRespostas({});
               setAviso('Avaliação salva! O resultado e o PDF estão disponíveis nas abas correspondentes.');

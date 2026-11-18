@@ -41,6 +41,10 @@ const ok = (c, m) => { console.log((c ? 'PASSOU ' : 'FALHOU ') + m); if (!c) pro
   ok(r.pontosAtencao.every(p => p.prioridade === 'alta' || p.prioridade === 'media') && new Set(r.pontosAtencao.map(p => p.id)).size === r.pontosAtencao.length, 'pontos com prioridade no formato da P01 e ids únicos');
   usuario = { data: { user: { user_metadata: { prefeitura: '  Prefeitura de Teste ' } } }, error: null };
   ok((await carregarResumoInicio()).prefeitura === 'Prefeitura vinculada: Prefeitura de Teste', 'prefeitura vem da conta quando existe');
+  // [integração] nome na Home: só o primeiro nome; sem nome cadastrado fica null (a Home mostra "gestor(a)")
+  ok((await carregarResumoInicio()).nome === null, 'conta sem nome: nome null (Home mostra gestor(a))');
+  usuario = { data: { user: { user_metadata: { nome_completo: '  Maria  da Silva ' } } }, error: null };
+  ok((await carregarResumoInicio()).nome === 'Maria', 'nome completo "Maria da Silva" vira "Maria" na saudação');
   usuario = 'erro';
   r = await carregarResumoInicio();
   ok(r.prefeitura === null && r.ultimaAvaliacao === esperado.date, 'sem conexão com o Supabase: prefeitura vazia, mas o resto continua aparecendo');

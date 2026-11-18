@@ -11,6 +11,7 @@ import { FgrcButton, FormField, Notice, OrangeLink, Page } from '@/components/fg
 import { dadosDaConta } from '@/lib/conta';
 // no suporte vale qualquer e-mail (quem não consegue entrar pode não ter o da prefeitura), só confere o formato
 import { formatoDeEmailValido } from '@/lib/email-institucional';
+import { plataformaDoPedido } from '@/lib/plataforma';
 import { supabase } from '@/lib/supabase';
 
 // assuntos fixos (fica mais fácil pra equipe separar os pedidos)
@@ -82,12 +83,20 @@ export default function Suporte() {
         email: emailLimpo,
         assunto,
         mensagem: textoLimpo.slice(0, LIMITE_MENSAGEM),
+        plataforma: plataformaDoPedido(),
       });
       if (error) {
         // 42P01/PGRST205 = a tabela ainda não foi criada no Supabase (falta rodar o SQL)
+        // mensagem_duplicada / limite_de_envios = trava contra spam que o banco faz sozinho
+        // (mesma mensagem em 10 min, ou mais de 5 por hora com o mesmo e-mail)
+        const texto = error.message ?? '';
         setErro(error.code === '42P01' || error.code === 'PGRST205'
           ? 'O suporte ainda não foi configurado. Avise a equipe do FGRC-M por outro canal.'
-          : 'Não foi possível enviar. Confira os dados e tente de novo.');
+          : texto.includes('mensagem_duplicada')
+            ? 'Essa mensagem já foi enviada há pouco. A equipe já recebeu, aguarde a resposta por e-mail.'
+            : texto.includes('limite_de_envios')
+              ? 'Muitas mensagens enviadas em pouco tempo. Aguarde uma hora e tente de novo.'
+              : 'Não foi possível enviar. Confira os dados e tente de novo.');
         return;
       }
       setEnviado(true);

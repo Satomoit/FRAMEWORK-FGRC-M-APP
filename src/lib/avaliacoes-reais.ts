@@ -24,6 +24,10 @@ export type AvaliacaoRegistrada = {
   id: string;
   finalizadaEm: string;
   respostas: RespostaRegistrada[];
+  // [integração RF-003] prefeitura a que a avaliação se refere (ex: "Prefeitura X - Cidade/MG")
+  // vem da conta aprovada pela administração e fica gravada junto, assim o PDF antigo continua
+  // mostrando a prefeitura certa mesmo se a conta mudar depois. Avaliações antigas não têm (fica vazio)
+  prefeitura?: string | null;
 };
 
 // apenas notas inteiras entre 0 e 4 servem (o mesmo intervalo do questionário do grupo)
@@ -31,7 +35,7 @@ function valorValido(valor: unknown): valor is number {
   return typeof valor === 'number' && Number.isInteger(valor) && valor >= 0 && valor <= 4;
 }
 
-export function montarAvaliacao(respostas: Record<string, number>): AvaliacaoRegistrada {
+export function montarAvaliacao(respostas: Record<string, number>, prefeitura: string | null = null): AvaliacaoRegistrada {
   // impede que o botão Finalizar crie um relatório com questões faltando
   if (TODAS_QUESTOES_FGRC.length === 0 || TODAS_QUESTOES_FGRC.some(q => !valorValido(respostas[q.id]))) {
     throw new Error('Responda todas as questões antes de finalizar a avaliação');
@@ -75,6 +79,7 @@ export function montarAvaliacao(respostas: Record<string, number>): AvaliacaoReg
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
     finalizadaEm: new Date().toISOString(),
     respostas: registros,
+    prefeitura,
   };
 }
 
@@ -93,8 +98,8 @@ export async function listarAvaliacoes(): Promise<AvaliacaoRegistrada[]> {
   );
 }
 
-export async function finalizarAvaliacao(respostas: Record<string, number>): Promise<AvaliacaoRegistrada> {
-  const registro = montarAvaliacao(respostas);
+export async function finalizarAvaliacao(respostas: Record<string, number>, prefeitura: string | null = null): Promise<AvaliacaoRegistrada> {
+  const registro = montarAvaliacao(respostas, prefeitura);
   // só considera finalizada depois que o armazenamento confirma a gravação
   const anteriores = await listarAvaliacoes();
   await gravarHistoricoBruto(JSON.stringify([registro, ...anteriores]));

@@ -20,6 +20,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "@/lib/supabase";
 // [integração P02] só aceita e-mail de prefeitura (e @gmail.com enquanto a gente testa)
 import { problemaNoEmailInstitucional } from "@/lib/email-institucional";
+import { plataformaDoPedido } from "@/lib/plataforma";
 
 export default function SolicitarAcesso() {
   const router = useRouter();
@@ -79,12 +80,17 @@ export default function SolicitarAcesso() {
         prefeitura: prefeitura.trim(),
         municipio: municipio.trim(),
         estado: estado.trim(),
+        // [integração] de onde veio o pedido (navegador, Android ou iPhone), aparece pra administração
+        plataforma: plataformaDoPedido(),
       });
 
       if (error) {
         // 23505 = já existe um pedido pendente com esse e-mail
         if (error.code === "23505") {
           setMensagem("Já existe um pedido em análise para este e-mail. Aguarde a resposta da administração.");
+        } else if (error.message?.includes("limite_de_envios")) {
+          // [integração] o banco limita 3 pedidos por e-mail em 24h (pra ninguém encher a lista de pedidos falsos)
+          setMensagem("Muitos pedidos enviados com este e-mail. Aguarde um dia ou fale com o suporte.");
         } else if (error.code === "42P01" || error.code === "PGRST205") {
           // tabela ainda não criada no Supabase (precisa rodar o script SQL uma vez)
           setMensagem("O cadastro de pedidos ainda não foi configurado. Fale com a administração do FGRC-M.");

@@ -23,6 +23,8 @@ type NomeIcone = ComponentProps<typeof Ionicons>['name'];
 
 type DadosInicio = {
   prefeitura: string | null;
+  // [integração] primeiro nome da conta (sem nome cadastrado continua "gestor(a)")
+  nome?: string | null;
   progresso: number | null;
   ultimaAvaliacao: string | null;
   quantidadePrioridades: number | null;
@@ -240,7 +242,7 @@ export default function HomeScreen() {
           contentContainerStyle={styles.scrollContent}
         >
           <View style={styles.header}>
-            <Text style={styles.title}>Olá, gestor(a)!</Text>
+            <Text style={styles.title}>Olá, {dados.nome || 'gestor(a)'}!</Text>
             <Text style={styles.subtitle}>
               {dados.prefeitura ?? 'Prefeitura vinculada: —'}
             </Text>

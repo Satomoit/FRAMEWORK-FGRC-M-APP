@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-// [integração P11] regra de senha compartilhada com a P08 (10+ caracteres, maiúscula, número e símbolo)
+// [integração P11] regra de senha compartilhada com a P08 (10+ caracteres, maiúscula, minúscula, número e símbolo)
 import { REGRA_SENHA_TEXTO, oQueFaltaNaSenha, validarSenhaForte } from '@/lib/politica-senha';
 import { supabase } from '@/lib/supabase';
 import { usePreferencias } from './PreferenciasProvider';

@@ -14,14 +14,12 @@ type Props = {
   onOpenPrivacy?: () => void;
   // [integração] abre a tela de Ajuda e suporte (só aparece quando alguém passar essa função)
   onOpenSupport?: () => void;
-  // [integração] área da administração (a rota só passa isso pra quem é admin)
-  onOpenAdmin?: () => void;
   // link pro logout real quando tiver autenticação
   onSignOut?: () => void | Promise<void>;
 };
 
 // essa é a tela 17 do protótipo (menu Mais)
-export default function MenuMaisScreen({ onOpenProfile, onOpenSettings, onOpenPrivacy, onOpenSupport, onOpenAdmin, onSignOut }: Props) {
+export default function MenuMaisScreen({ onOpenProfile, onOpenSettings, onOpenPrivacy, onOpenSupport, onSignOut }: Props) {
   // usa as cores do tema atual
   const { colors } = useFgrcTheme();
   // guarda os avisos dos botões que ainda dependem do grupo
@@ -53,9 +51,6 @@ export default function MenuMaisScreen({ onOpenProfile, onOpenSettings, onOpenPr
         {/* [integração] canal pra falar com a equipe do FGRC-M (problema, dúvida ou erro) */}
         {onOpenSupport ? (
           <MenuOption title="Ajuda e suporte" subtitle="Fale com a equipe do FGRC-M" symbol="help" onPress={onOpenSupport} />
-        ) : null}
-        {onOpenAdmin ? (
-          <MenuOption title="Administração" subtitle="Pedidos de acesso e mensagens" symbol="shield" onPress={onOpenAdmin} />
         ) : null}
       </View>
 

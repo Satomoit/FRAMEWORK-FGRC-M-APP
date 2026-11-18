@@ -13,6 +13,8 @@ import { supabase } from '@/lib/supabase';
 // a prioridade é 'media' sem acento pq é assim que a Home da Nicole espera
 export type ResumoInicio = {
   prefeitura: string | null;
+  // [integração] primeiro nome da pessoa logada pro "Olá, Maria!" (o Mapeamento pede o nome na Home)
+  nome?: string | null;
   progresso: number | null;
   ultimaAvaliacao: string | null;
   quantidadePrioridades: number | null;
@@ -31,24 +33,31 @@ export async function progressoDoRascunho(): Promise<number | null> {
 }
 
 // pega a prefeitura gravada na conta (se o grupo já tiver colocado no Supabase)
-async function prefeituraDaConta(): Promise<string | null> {
+// [integração] agora devolve também o primeiro nome (as duas coisas vêm da mesma conta)
+async function contaDaHome(): Promise<{ prefeitura: string | null; nome: string | null }> {
   const { data, error } = await supabase.auth.getUser();
-  if (error || !data.user) return null;
+  if (error || !data.user) return { prefeitura: null, nome: null };
   // [integração] usa o mesmo leitor do perfil (prefere o que a administração gravou)
-  const linha = linhaDaPrefeitura(dadosDaConta(data.user));
-  return linha ? `Prefeitura vinculada: ${linha}` : null;
+  const dados = dadosDaConta(data.user);
+  const linha = linhaDaPrefeitura(dados);
+  return {
+    prefeitura: linha ? `Prefeitura vinculada: ${linha}` : null,
+    // "Maria da Silva" vira "Maria" (só a primeira palavra, pra saudação ficar curta)
+    nome: dados.nome ? dados.nome.split(/\s+/)[0] : null,
+  };
 }
 
 export async function carregarResumoInicio(): Promise<ResumoInicio> {
   // allSettled = se uma parte falhar (ex: sem internet pro Supabase) as outras continuam aparecendo
-  const [prefeitura, progresso, historico] = await Promise.allSettled([
-    prefeituraDaConta(),
+  const [conta, progresso, historico] = await Promise.allSettled([
+    contaDaHome(),
     progressoDoRascunho(),
     listarAvaliacoes(),
   ]);
 
   const resumo: ResumoInicio = {
-    prefeitura: prefeitura.status === 'fulfilled' ? prefeitura.value : null,
+    prefeitura: conta.status === 'fulfilled' ? conta.value.prefeitura : null,
+    nome: conta.status === 'fulfilled' ? conta.value.nome : null,
     progresso: progresso.status === 'fulfilled' ? progresso.value : null,
     ultimaAvaliacao: null,
     quantidadePrioridades: null,

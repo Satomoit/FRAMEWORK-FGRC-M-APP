@@ -26,3 +26,15 @@ let falhou = false; try { montarAvaliacao({ ...max, [Q[25].id]: 4 }); } catch { 
 ok(falhou, 'nota 4 numa pergunta AWR é recusada (não existe essa alternativa)');
 const antigo = { ...r.answers[25] }; delete antigo.valorMaximo;
 ok(valorMaximoDa(antigo) === max[antigo.id], 'avaliação salva antes (sem valorMaximo) usa o máximo do questionário');
+// [integração RF-003] a prefeitura da conta fica gravada junto da avaliação (e avaliação sem ela continua valendo)
+ok(montarAvaliacao(max, 'Prefeitura de Teste - Cidade/MG').prefeitura === 'Prefeitura de Teste - Cidade/MG', 'RF-003: prefeitura gravada na avaliação');
+ok(montarAvaliacao(max).prefeitura === null && paraRelatorio(montarAvaliacao(max)).score === 0, 'RF-003: sem prefeitura a avaliação é montada igual (prefeitura null)');
+// [integração RF-008] faltando uma resposta a avaliação não fecha
+const semUma = { ...max }; delete semUma[Q[7].id];
+let recusou = false; try { montarAvaliacao(semUma); } catch { recusou = true; }
+ok(recusou, 'RF-008: com 1 pergunta sem resposta a avaliação não é finalizada');
+// [integração RNF-012] as mesmas respostas dão sempre o mesmo resultado (índice, eixos e recomendações)
+const misto = Object.fromEntries(Q.map((q, i) => [q.id, i % (max[q.id] + 1)]));
+const r1 = paraRelatorio(montarAvaliacao(misto)), r2 = paraRelatorio(montarAvaliacao(misto));
+const sem = x => JSON.stringify({ s: x.score, c: x.classification, d: x.dimensions, a: x.answers });
+ok(sem(r1) === sem(r2), `RNF-012: mesmas respostas, mesmo resultado (índice ${r1.score}, ${r1.classification})`);

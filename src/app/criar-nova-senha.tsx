@@ -81,7 +81,7 @@ export default function HomeScreen() {
       return;
     }
 
-    // mesma regra da tela Alterar senha (10 caracteres, maiúscula, número e símbolo)
+    // mesma regra da tela Alterar senha (10 caracteres, maiúscula, minúscula, número e símbolo)
     const falta = oQueFaltaNaSenha(senha);
     if (falta.length > 0) {
       setMensagem(`Falta na senha: ${falta.join(", ")}.`);

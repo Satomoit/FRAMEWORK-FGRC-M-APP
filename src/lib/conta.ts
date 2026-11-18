@@ -7,6 +7,8 @@
 //   * o nome é o único dado que a pessoa pode mudar sozinha (fica no user_metadata)
 import type { User } from '@supabase/supabase-js';
 
+import { supabase } from '@/lib/supabase';
+
 export const SEM_DADO = 'Não informado';
 
 type Metadados = Record<string, unknown>;
@@ -43,11 +45,17 @@ export function dadosDaConta(user: User): DadosDaConta {
   };
 }
 
-// [integração] é admin? mesma regra do SQL (supabase/fgrcm-admin.sql):
-// fgrcm_papel "admin" no app_metadata, que só a administração muda pelo painel
-// isso só decide se MOSTRA o botão; quem bloqueia de verdade é o Supabase (RLS e a função)
-export function eAdmin(user: User | null | undefined): boolean {
-  return user?.app_metadata?.fgrcm_papel === 'admin';
+// [integração] a função eAdmin (que olhava o app_metadata) saiu daqui de propósito
+// agora quem é admin fica na tabela public.administradores e quem confere é o banco
+// (função estado_admin_fgrcm, usada em src/lib/admin.ts). Assim não tem duas regras diferentes
+
+// [integração RF-003] prefeitura da conta logada, pra gravar junto da avaliação quando finaliza
+// usa getSession (lê a sessão salva no aparelho) e não getUser (que vai na internet)
+// pq a avaliação tem que dar pra finalizar sem conexão (RNF-006)
+export async function prefeituraDaSessao(): Promise<string | null> {
+  const { data } = await supabase.auth.getSession();
+  const user = data.session?.user;
+  return user ? linhaDaPrefeitura(dadosDaConta(user)) : null;
 }
 
 // "Prefeitura Municipal de X - X/MG" (ou null se a conta não tiver nada disso)

@@ -9,7 +9,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useFgrcTheme } from '@/components/fgrc-colors';
 import MenuMaisScreen from '@/features/p09-menu-perfil/MenuMaisScreen';
 import PerfilScreen, { type ProfileData } from '@/features/p09-menu-perfil/PerfilScreen';
-import { SEM_DADO, dadosDaConta, eAdmin } from '@/lib/conta';
+import { SEM_DADO, dadosDaConta } from '@/lib/conta';
 import { problemaNoEmailInstitucional } from '@/lib/email-institucional';
 import { supabase } from '@/lib/supabase';
 
@@ -64,8 +64,6 @@ export default function Mais() {
   const [mostrarPerfil, setMostrarPerfil] = useState(tela === 'perfil');
   const [perfil, setPerfil] = useState<ProfileData | null>(null);
   const [erro, setErro] = useState('');
-  // [integração] só mostra o item Administração pra quem é admin
-  const [admin, setAdmin] = useState(false);
 
   // se vc pedir o perfil de novo com essa tela já aberta, atualiza
   useEffect(() => {
@@ -83,7 +81,6 @@ export default function Mais() {
           return;
         }
         setPerfil(perfilDoUsuario(data.user));
-        setAdmin(eAdmin(data.user));
       })
       .catch(() => {
         if (ativo) setErro('Não foi possível conectar ao serviço de autenticação.');
@@ -142,11 +139,12 @@ export default function Mais() {
         // [integração P11] Configurações abre a tela 22 da Nicole
         // (o "as Href" é pq a lista de rotas tipadas só atualiza quando o Expo inicia, igual as outras rotas de integração)
         onOpenSettings={() => router.push('/configuracoes' as Href)}
-        // Privacidade fica sem função de propósito (o grupo ainda não definiu o texto)
-        // aí a própria P09 mostra o aviso dela em vez de abrir tela inventada
+        // [integração] Privacidade e termos abre a tela /privacidade (texto descreve o que o app faz de verdade
+        // com os dados; o grupo ainda precisa revisar e aprovar a redação final)
+        onOpenPrivacy={() => router.push('/privacidade' as Href)}
         // [integração] Ajuda e suporte abre o formulário de contato (grava o pedido no Supabase)
         onOpenSupport={() => router.push('/suporte' as Href)}
-        onOpenAdmin={admin ? () => router.push('/admin' as Href) : undefined}
+        // [integração] a Administração saiu daqui de propósito: agora é uma área separada (rota /admin)
         onSignOut={sair}
       />
     </View>

@@ -74,6 +74,13 @@ const rotasPublicas = [
   "/suporte",
   // [integração] ativar acesso com o código do e-mail (a pessoa ainda não tem senha)
   "/ativar-acesso",
+  // [integração] consultar se o pedido de acesso já foi analisado (a pessoa ainda não tem conta)
+  "/situacao-pedido",
+  // [integração] privacidade e termos tem que dar pra ler antes de pedir acesso
+  "/privacidade",
+  // [integração] a área administrativa tem login próprio, então abre sem login do app
+  // (quem barra conta comum é o banco + a função admin-fgrcm, não essa lista)
+  "/admin",
 ];
 
 // nessas a barra não aparece: as públicas e a Home, que já tem a barra própria da P01

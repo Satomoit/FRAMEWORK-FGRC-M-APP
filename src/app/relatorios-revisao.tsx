@@ -19,6 +19,15 @@ async function prefeituraDaConta(): Promise<string | null> {
   return linha ? `Prefeitura: ${linha}` : null;
 }
 
+// [integração RF-003] usa a prefeitura gravada na avaliação quando ela tem
+// (avaliações feitas antes dessa mudança não têm, aí usa a da conta logada)
+function comPrefeitura(avaliacao: AvaliacaoRegistrada, daConta: string | null): Report {
+  return {
+    ...paraRelatorio(avaliacao),
+    prefeitura: avaliacao.prefeitura ? `Prefeitura: ${avaliacao.prefeitura}` : daConta,
+  };
+}
+
 export default function RelatoriosRevisao() {
   const { avaliacaoId } = useLocalSearchParams<{ avaliacaoId?: string }>();
   const [registros, setRegistros] = useState<AvaliacaoRegistrada[]>([]);
@@ -29,15 +38,17 @@ export default function RelatoriosRevisao() {
 
   useFocusEffect(useCallback(() => {
     let ativo = true;
-    // se falhar (ex: sem internet) o relatório sai igual, só sem a linha da prefeitura
-    prefeituraDaConta().then(p => { if (ativo) setPrefeitura(p); }).catch(() => {});
-    listarAvaliacoes().then(lista => {
+    // [integração] espera as duas coisas (prefeitura e histórico) antes de abrir o relatório
+    // antes o relatório aberto direto pelos detalhes saía sem a prefeitura (o valor ainda não tinha chegado)
+    // se a prefeitura falhar (ex: sem internet) o relatório sai igual, só sem essa linha
+    Promise.all([prefeituraDaConta().catch(() => null), listarAvaliacoes()]).then(([p, lista]) => {
       if (!ativo) return;
+      setPrefeitura(p);
       setRegistros(lista);
       // se veio pela tela de detalhes já abre as recomendações desse relatório
       if (avaliacaoId) {
         const encontrado = lista.find(a => a.id === avaliacaoId);
-        setSelecionado(encontrado ? { ...paraRelatorio(encontrado), prefeitura } : null);
+        setSelecionado(encontrado ? comPrefeitura(encontrado, p) : null);
       }
     }).catch(() => { if (ativo) setErro('Não foi possível abrir o histórico de relatórios'); })
       .finally(() => { if (ativo) setCarregando(false); });
@@ -60,7 +71,7 @@ export default function RelatoriosRevisao() {
       />
     ) : (
       <RelatoriosScreen
-        reports={registros.map(r => ({ ...paraRelatorio(r), prefeitura }))}
+        reports={registros.map(r => comPrefeitura(r, prefeitura))}
         recommendationsFor={paraRecomendacoes}
         onOpenReport={setSelecionado}
       />

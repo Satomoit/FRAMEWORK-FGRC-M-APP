@@ -60,6 +60,9 @@ export default function LoginScreen() {
           setMensagem('E-mail ou senha incorretos.');
         } else if (error.code === 'email_not_confirmed') {
           setMensagem('Confirme seu e-mail antes de entrar.');
+        } else if (error.code === 'user_banned') {
+          // [integração] conta desativada pela administração (aba Contas da área administrativa)
+          setMensagem('Esta conta está desativada. Fale com o suporte.');
         } else if (error.status === 429) {
           setMensagem('Muitas tentativas. Aguarde e tente novamente.');
         } else {
@@ -240,6 +243,19 @@ export default function LoginScreen() {
               </Pressable>
             </View>
 
+            {/* [integração] "Status da solicitação" do Mapeamento: consulta se o pedido já foi analisado */}
+            <View style={styles.registerRow}>
+              <Text style={styles.registerText}>Já fez o pedido?</Text>
+              <Pressable
+                accessibilityRole="button"
+                style={styles.registerButton}
+                disabled={carregando}
+                onPress={() => router.push('/situacao-pedido' as Href)}
+              >
+                <Text style={styles.link}>Ver situação</Text>
+              </Pressable>
+            </View>
+
             {/* [integração] quem não consegue entrar também precisa de um jeito de pedir ajuda */}
             <View style={styles.registerRow}>
               <Text style={styles.registerText}>Precisa de ajuda?</Text>
@@ -250,6 +266,20 @@ export default function LoginScreen() {
                 onPress={() => router.push('/suporte' as Href)}
               >
                 <Text style={styles.link}>Falar com o suporte</Text>
+              </Pressable>
+            </View>
+
+            {/* [integração] links pequenos no pé da tela: privacidade (dá pra ler antes de pedir acesso)
+                e a entrada da área administrativa, que não fica em nenhum menu do app
+                (no celular não tem barra de endereço pra digitar /admin, por isso o link existe)
+                se o grupo preferir esconder, é só apagar o Pressable da Área da administração */}
+            <View style={styles.registerRow}>
+              <Pressable accessibilityRole="link" hitSlop={8} onPress={() => router.push('/privacidade' as Href)}>
+                <Text style={styles.registerText}>Privacidade e termos</Text>
+              </Pressable>
+              <Text style={styles.registerText}>  ·  </Text>
+              <Pressable accessibilityRole="link" hitSlop={8} onPress={() => router.push('/admin' as Href)}>
+                <Text style={styles.registerText}>Área da administração</Text>
               </Pressable>
             </View>
           </View>
