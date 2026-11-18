@@ -41,3 +41,17 @@ example
 # generated native folders
 /ios
 /android
+
+# [revisao final] o que nunca deve ir pro GitHub
+# (.env com chave, APK baixado do expo.dev e gravacoes/prints originais com dados pessoais)
+.env
+*.apk
+*.aab
+docs/testes/evidencias/originais/
+
+# [docs] a documentação acadêmica fica fora deste repositório (só a técnica vai pro GitHub)
+docs/testes/
+docs/registro-*.md
+docs/plano-de-testes-mvp.md
+docs/rastreabilidade-requisitos.md
+docs/versao-1.1.0-notas-e-build.md

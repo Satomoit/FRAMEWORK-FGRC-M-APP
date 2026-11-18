@@ -1,0 +1,21 @@
+{
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "local",
+    "requireCommit": true
+  },
+  "build": {
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_PREVIEW_MODE": "false",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://pqblfalpxxzczhbaglso.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_MKLz1K6T-XCZLINtD21V9g_6f89zUyu",
+        "EXPO_PUBLIC_DOMINIOS_EMAIL": "gov.br,gmail.com"
+      }
+    }
+  }
+}
