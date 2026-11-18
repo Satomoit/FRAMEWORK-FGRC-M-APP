@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 
@@ -11,7 +12,12 @@ import {
 
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { useCorDoTema, type CorDoTema } from "@/components/cor-do-tema";
+
 export default function SolicitacaoEnviada() {
+  // [tema] cores que seguem o tema escolhido (Configurações ou Opções da página inicial)
+  const { cor, escuro } = useCorDoTema();
+  const styles = useMemo(() => criarEstilos(cor), [cor]);
   const router = useRouter();
 
   const voltarLogin = () => {
@@ -20,7 +26,7 @@ export default function SolicitacaoEnviada() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar style="dark" />
+      <StatusBar style={escuro ? 'light' : 'dark'} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -60,12 +66,13 @@ export default function SolicitacaoEnviada() {
           </View>
 
           {/* Botão voltar para login */}
+          {/* [entrada nova] "/" agora é a página inicial (Conheça o FGRC-M), então o texto mudou */}
           <TouchableOpacity
             style={styles.button}
             onPress={voltarLogin}
             activeOpacity={0.85}
           >
-            <Text style={styles.buttonText}>Voltar para login</Text>
+            <Text style={styles.buttonText}>Voltar para a página inicial</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -73,10 +80,13 @@ export default function SolicitacaoEnviada() {
   );
 }
 
-const styles = StyleSheet.create({
+// [tema] os estilos viraram uma função pra as cores seguirem o tema (claro, escuro e alto contraste)
+// tamanhos e espaçamentos não mudaram, e no tema claro as cores continuam as originais
+function criarEstilos(cor: CorDoTema) {
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#F4F7FC",
+    backgroundColor: cor("#F4F7FC", "background"),
   },
 
   scrollContent: {
@@ -95,7 +105,7 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: 29,
-    backgroundColor: "#F8E3D3",
+    backgroundColor: cor("#F8E3D3", "laranjaFundo"),
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 22,
@@ -103,14 +113,14 @@ const styles = StyleSheet.create({
 
   envelopeIcon: {
     fontSize: 29,
-    color: "#F07819",
+    color: cor("#F07819", "orange"),
     fontWeight: "400",
   },
 
   title: {
     fontSize: 22,
     fontWeight: "700",
-    color: "#080808",
+    color: cor("#080808", "text"),
     textAlign: "center",
     marginBottom: 19,
   },
@@ -118,7 +128,7 @@ const styles = StyleSheet.create({
   description: {
     fontSize: 13,
     lineHeight: 18,
-    color: "#536782",
+    color: cor("#536782", "muted"),
     textAlign: "center",
     marginBottom: 19,
     paddingHorizontal: 5,
@@ -127,9 +137,9 @@ const styles = StyleSheet.create({
   statusCard: {
     width: "100%",
     minHeight: 90,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: cor("#FFFFFF", "surface"),
     borderWidth: 1,
-    borderColor: "#71849C",
+    borderColor: cor("#71849C", "border"),
     borderRadius: 12,
     paddingHorizontal: 13,
     paddingVertical: 13,
@@ -145,26 +155,26 @@ const styles = StyleSheet.create({
 
   clockIcon: {
     fontSize: 25,
-    color: "#F07819",
+    color: cor("#F07819", "orange"),
     marginRight: 11,
   },
 
   statusTitle: {
     fontSize: 13,
-    color: "#152943",
+    color: cor("#152943", "text"),
     fontWeight: "400",
   },
 
   statusDescription: {
     fontSize: 11,
     lineHeight: 15,
-    color: "#536782",
+    color: cor("#536782", "muted"),
   },
 
   button: {
     width: "100%",
     height: 47,
-    backgroundColor: "#12558F",
+    backgroundColor: cor("#12558F", "blue"),
     borderRadius: 11,
     justifyContent: "center",
     alignItems: "center",
@@ -172,7 +182,8 @@ const styles = StyleSheet.create({
 
   buttonText: {
     fontSize: 14,
-    color: "#FFFFFF",
+    color: cor("#FFFFFF", "sobreAzul"),
     fontWeight: "500",
   },
 });
+}

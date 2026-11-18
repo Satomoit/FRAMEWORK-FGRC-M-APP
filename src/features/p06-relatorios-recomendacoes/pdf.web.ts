@@ -10,16 +10,22 @@ import {
   textoReferencia,
   valorMaximoDa,
 } from '@/lib/calcular-relatorio';
+// [correção Android] mesmo nome de arquivo do celular: FGRC-M_Avaliacao_2026-11-18_AB12CD.pdf
+import { nomeDoArquivoPdf } from '@/lib/nome-do-pdf';
 
 const LARGURA = 595.28; // página A4 em pontos
 const ALTURA = 841.89;
 const MARGEM = 45;
 
+// [correção Android] mesmo formato de resposta do pdf.ts (celular), pra tela não precisar saber onde roda
+export type ResultadoPdf = { ok: boolean; mensagem: string; nomeArquivo: string };
+
 // esse método recebe exatamente a avaliação que o usuário finalizou
-export async function generateReportPdf(
+// [correção Android] agora ele só MONTA o PDF; baixar, abrir e compartilhar ficam lá embaixo
+async function montarPdf(
   report: Report,
   recs: Recommendation[],
-): Promise<string> {
+): Promise<Blob> {
   // não gera um documento vazio ou com dados de exemplo
   if (!report.answers?.length) {
     throw new Error('Essa avaliação não possui respostas para gerar o PDF');
@@ -173,15 +179,16 @@ export async function generateReportPdf(
     });
   });
 
-  // os bytes são um PDF verdadeiro; o navegador recebe um link de download
+  // os bytes são um PDF verdadeiro (não é print da tela)
   const bytes = await pdf.save();
   const dados = new ArrayBuffer(bytes.byteLength);
   new Uint8Array(dados).set(bytes);
-  const url = URL.createObjectURL(new Blob([dados], { type: 'application/pdf' }));
-  // [integração] nome do arquivo com data e hora (assim duas avaliações do mesmo dia não ficam com nome igual)
-  const quando = report.finalizedAt ? new Date(report.finalizedAt) : null;
-  const hora = quando ? `-${String(quando.getHours()).padStart(2, '0')}h${String(quando.getMinutes()).padStart(2, '0')}` : '';
-  const nome = `FGRC-M-avaliacao-${String(report.date).replace(/[^0-9a-z-]/gi, '-')}${hora}.pdf`;
+  return new Blob([dados], { type: 'application/pdf' });
+}
+
+// BAIXAR: o navegador salva o arquivo na pasta de downloads dele (ou pergunta onde salvar)
+function baixarBlob(blob: Blob, nome: string) {
+  const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
   link.download = nome;
@@ -189,5 +196,65 @@ export async function generateReportPdf(
   link.click();
   link.remove();
   window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
-  return nome;
+}
+
+export async function baixarRelatorioPdf(report: Report, recs: Recommendation[]): Promise<ResultadoPdf> {
+  const blob = await montarPdf(report, recs);
+  const nome = nomeDoArquivoPdf(report.id, report.finalizedAt);
+  baixarBlob(blob, nome);
+  return { ok: true, mensagem: `PDF baixado: ${nome}. Ele fica na pasta de downloads do navegador.`, nomeArquivo: nome };
+}
+
+// ABRIR: mostra o PDF numa aba nova, no leitor do próprio navegador
+// a aba é aberta ANTES de montar o PDF (ainda "dentro" do clique), senão o bloqueador de pop-up barra
+export async function abrirRelatorioPdf(report: Report, recs: Recommendation[]): Promise<ResultadoPdf> {
+  const nome = nomeDoArquivoPdf(report.id, report.finalizedAt);
+  const aba = typeof window !== 'undefined' ? window.open('', '_blank') : null;
+  let blob: Blob;
+  try {
+    blob = await montarPdf(report, recs);
+  } catch (erro) {
+    aba?.close();
+    throw erro;
+  }
+  if (!aba) {
+    // o navegador bloqueou a aba nova: baixa o arquivo pra pessoa não ficar sem nada
+    baixarBlob(blob, nome);
+    return { ok: false, mensagem: `O navegador bloqueou a aba nova, então o PDF foi baixado (${nome}). Libere pop-ups deste site para abrir direto.`, nomeArquivo: nome };
+  }
+  const url = URL.createObjectURL(blob);
+  aba.location.href = url;
+  // o endereço temporário (blob:) some depois de 5 minutos; o PDF já aberto continua na aba
+  window.setTimeout(() => URL.revokeObjectURL(url), 5 * 60_000);
+  return { ok: true, mensagem: '', nomeArquivo: nome };
+}
+
+// COMPARTILHAR: no celular (Chrome do Android, Safari) abre a janela de compartilhar com o ARQUIVO PDF
+// no computador quase nenhum navegador compartilha arquivo: ai baixa e avisa
+export async function compartilharRelatorioPdf(report: Report, recs: Recommendation[]): Promise<ResultadoPdf> {
+  const blob = await montarPdf(report, recs);
+  const nome = nomeDoArquivoPdf(report.id, report.finalizedAt);
+  const nav = globalThis.navigator as Navigator | undefined;
+  const arquivo = typeof File === 'function' ? new File([blob], nome, { type: 'application/pdf' }) : null;
+  if (arquivo && nav?.share && nav.canShare?.({ files: [arquivo] })) {
+    try {
+      await nav.share({ files: [arquivo], title: nome });
+      return { ok: true, mensagem: '', nomeArquivo: nome };
+    } catch (erro) {
+      // fechou a janela de compartilhar: não é erro, não mostra nada
+      if (erro instanceof Error && erro.name === 'AbortError') return { ok: false, mensagem: '', nomeArquivo: nome };
+      // NotAllowedError = demorou demais depois do clique; ai cai no download lá embaixo
+    }
+  }
+  baixarBlob(blob, nome);
+  return {
+    ok: false,
+    mensagem: `Este navegador não compartilha arquivos direto, então o PDF foi baixado (${nome}). Envie o arquivo pelo app que você preferir.`,
+    nomeArquivo: nome,
+  };
+}
+
+// [integração] nome antigo continua existindo pra quem já chamava ele (tela de Recomendações e index.ts)
+export async function generateReportPdf(report: Report, recs: Recommendation[]): Promise<ResultadoPdf> {
+  return baixarRelatorioPdf(report, recs);
 }

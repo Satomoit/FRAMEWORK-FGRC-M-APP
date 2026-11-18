@@ -3,6 +3,7 @@ import type { AssessmentResult } from '@/features/p05-resultados-detalhamento/ty
 import type { Recommendation, Report } from '@/features/p06-relatorios-recomendacoes/types';
 import { TODAS_QUESTOES_FGRC } from '@/features/p03-avaliacoes-questionario/questionarioData';
 import type { AvaliacaoRegistrada, RespostaRegistrada } from '@/lib/avaliacoes-reais';
+import { dataDa, dataHoraDa } from '@/lib/datas';
 
 // [integração] nota máxima de cada pergunta
 // o formulário do grupo tem 0 a 4 na maioria, mas o eixo AWR (Nicole) vai só de 0 a 3
@@ -53,13 +54,9 @@ export function comLetraMaiuscula(texto: string): string {
 }
 
 // [integração] data e hora no fuso do aparelho (antes usava UTC e depois das 21h saía o dia seguinte)
-export function dataDa(iso: string): string {
-  return new Date(iso).toLocaleDateString('pt-BR');
-}
-export function dataHoraDa(iso: string): string {
-  const d = new Date(iso);
-  return `${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
-}
+// as funções moraram aqui até a revisão final; agora ficam em src/lib/datas.ts e continuam exportadas daqui
+// pra não precisar mexer no pdf.ts e no pdf.web.ts da P06
+export { dataDa, dataHoraDa };
 
 const classificar = (valor: number): 'Baixo' | 'Intermediário' | 'Alto' =>
   valor <= 33 ? 'Baixo' : valor <= 66 ? 'Intermediário' : 'Alto';

@@ -69,7 +69,8 @@ export default function SituacaoDoPedido() {
                 Se recebeu um código por e-mail, use Ativar acesso.
               </Text>
               <View style={styles.acoes}>
-                <FgrcButton label="Ir para o login" onPress={() => router.replace('/' as Href)} />
+                {/* [entrada nova] o Login agora fica em /entrar */}
+                <FgrcButton label="Ir para o login" onPress={() => router.replace('/entrar' as Href)} />
                 <FgrcButton label="Ativar acesso com código" variant="outlined" onPress={() => router.push('/ativar-acesso' as Href)} />
               </View>
             </>

@@ -44,6 +44,8 @@ Clique em **Save changes**.
 
 ## Parte 4: textos dos e-mails (com o código)
 
+> **Importante (depois do teste no Android, 18/11):** os modelos **Invite user** e **Magic link** precisam ter **só o código** (`{{ .Token }}`), **sem** `{{ .ConfirmationURL }}`. No celular o link abria o navegador no endereço padrão do projeto (`localhost`) e não entrava no app. Abra os dois modelos no painel e confira: se tiver um link ou a frase em inglês "Follow this link", troque pelo texto abaixo e salve. O app não usa mais link para entrar (só para a recuperação de senha).
+
 **Authentication** > **Emails** > aba **Templates**. Em cada modelo, troque o assunto (*Subject*) e o corpo (*Body*, em HTML), e clique em **Save**.
 Sem isso os e-mails chegam com o texto padrão do Supabase, em inglês ("Reset your password"). As partes entre `{{ }}` não podem ser apagadas: são elas que colocam o código e o link.
 
@@ -120,6 +122,8 @@ Corpo:
 Se aparecer mais algum e-mail em inglês (por exemplo, aviso de senha alterada), ele fica na mesma área de **Emails** do Supabase e pode ser traduzido do mesmo jeito: troque só o texto e mantenha as partes entre `{{ }}`.
 
 ## Parte 5: endereços permitidos do link de senha
+
+O **Site URL** (Authentication > URL Configuration) é para onde o Supabase manda quando um link não diz para onde voltar. Pelos registros do teste de 18/11, ele está no padrão do Supabase (`http://localhost:3000`): foi para lá que o link de acesso mandou o celular. Com os modelos só com código isso não atrapalha mais; se um dia publicarem o site, coloquem o endereço dele ali.
 
 **Authentication** > **URL Configuration** > **Redirect URLs** > **Add URL**:
 

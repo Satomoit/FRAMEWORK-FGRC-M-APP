@@ -5,6 +5,10 @@
 //   * recusar pedido (com motivo)
 //   * novo acesso pra quem perdeu: nova senha provisória, novo código ou reenviar o código por e-mail
 //   * listar as contas cadastradas e desativar/reativar uma conta
+//   * [v3] desativar agora também derruba as sessões abertas da pessoa (fgrcm_encerrar_sessoes)
+//   * [v3] mensagens de erro de e-mail mais claras (limite de 60 s por e-mail x limite por hora)
+// os e-mails levam SÓ o código de 6 números (modelos Invite user e Magic link do painel)
+// o link de acesso por e-mail ficou fora da entrega: no celular ele caía no Site URL (localhost) e não entrava
 // antes de qualquer coisa a função pergunta pro banco se quem chamou é admin (estado_admin_fgrcm)
 // assim a regra de "quem é admin" fica num lugar só: a tabela public.administradores (+ MFA se ativado)
 //
@@ -37,18 +41,27 @@ const uuidValido = (v: unknown): v is string =>
   typeof v === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 
 // traduz os erros de envio de e-mail do Supabase pra uma frase que a administração entende
+// [v3] o 429 pode ser duas coisas diferentes, e antes as duas viravam "limite por hora":
+//   * mesmo e-mail pedido de novo em menos de 60 s -> a mensagem do Supabase diz "after N seconds"
+//   * limite de e-mails por hora do projeto (Authentication > Rate Limits)
+// também grava o código do erro no log da função (sem o e-mail da pessoa) pra dar pra investigar depois
 function erroDeEmail(erro: { code?: string; status?: number; message?: string } | null): string {
   const codigo = erro?.code ?? '';
+  console.error('envio de e-mail falhou', codigo || '(sem código)', erro?.status ?? '');
   if (codigo === 'email_address_not_authorized') {
-    return 'O envio de e-mail do Supabase ainda não foi configurado (SMTP): sem isso ele só manda pra quem é da equipe do projeto. Use o código de ativação ou a senha provisória.';
+    return 'O envio de e-mail do Supabase ainda não foi configurado (SMTP): sem isso ele só manda pra quem é da equipe do projeto. Use "Gerar código" e passe o código pra pessoa.';
   }
   if (codigo === 'email_address_invalid') {
-    return 'Esse e-mail não existe ou não recebe mensagens. Confira o endereço, ou use o código de ativação ou a senha provisória.';
+    return 'Esse e-mail não existe ou não recebe mensagens (o domínio não aceita e-mail). Confira o endereço com a pessoa.';
+  }
+  const segundos = /after (\d+) second/i.exec(erro?.message ?? '');
+  if (segundos) {
+    return `Já foi enviado um código pra esse e-mail agora há pouco. Espere ${segundos[1]} segundos e tente de novo (o Supabase só manda um código novo pro mesmo e-mail a cada 60 segundos).`;
   }
   if (codigo === 'over_email_send_rate_limit' || erro?.status === 429) {
-    return 'Limite de e-mails por hora do Supabase atingido. Espere um pouco ou use o código de ativação.';
+    return 'O limite de e-mails por hora do projeto foi atingido. Espere um pouco, ou aumente o limite em Authentication > Rate Limits, ou use "Gerar código".';
   }
-  return 'Não foi possível enviar o e-mail. Confira o envio de e-mail (SMTP) do Supabase ou use o código de ativação.';
+  return `Não foi possível enviar o e-mail. Confira o envio de e-mail (SMTP) do Supabase ou use "Gerar código".${codigo ? ` Detalhe técnico: ${codigo}.` : ''}`;
 }
 
 Deno.serve(async (req) => {
@@ -289,8 +302,26 @@ Deno.serve(async (req) => {
       ban_duration: desativar ? '876000h' : 'none',
     });
     if (error) return resposta(500, { erro: 'Não foi possível alterar a conta.' });
-    await registrar(desativar ? 'conta_desativada' : 'conta_reativada', 'auth.users', corpo.userId, desativar ? 'desativada' : 'ativa', { email: data.user?.email, motivo: observacao });
-    return resposta(200, { ok: true, mensagem: desativar ? 'Conta desativada.' : 'Conta reativada.' });
+
+    // [v3] o bloqueio sozinho não tira quem já tava logado (a sessão continuava até renovar)
+    // então derruba as sessões abertas: a renovação para na hora e o login pede senha de novo
+    // (o crachá que já foi entregue ainda vale até vencer, no máximo 1 hora)
+    let sessoes: number | null = null;
+    if (desativar) {
+      const { data: quantas, error: erroSessoes } = await servidor.rpc('fgrcm_encerrar_sessoes', { p_user: corpo.userId });
+      if (erroSessoes) console.error('não deu pra encerrar as sessões', erroSessoes.code ?? erroSessoes.message);
+      else sessoes = typeof quantas === 'number' ? quantas : null;
+    }
+
+    await registrar(desativar ? 'conta_desativada' : 'conta_reativada', 'auth.users', corpo.userId, desativar ? 'desativada' : 'ativa', { email: data.user?.email, motivo: observacao, sessoes_encerradas: sessoes });
+    return resposta(200, {
+      ok: true,
+      mensagem: desativar
+        ? sessoes === null
+          ? 'Conta desativada. Não foi possível encerrar as sessões abertas agora; a pessoa sai sozinha em até 1 hora.'
+          : `Conta desativada. Sessões abertas encerradas: ${sessoes}.`
+        : 'Conta reativada.',
+    });
   }
 
   return resposta(400, { erro: 'Ação desconhecida.' });

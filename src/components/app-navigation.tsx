@@ -56,6 +56,8 @@ const secoes: {
       // [integração P11] telas da Nicole que abrem a partir do Mais
       "/configuracoes",
       "/alterar-senha",
+      // [suporte] Meus chamados abre pelo Mais
+      "/meus-chamados",
     ],
   },
 ];
@@ -63,7 +65,9 @@ const secoes: {
 // [integração B1] as únicas rotas que abrem sem login
 // (login, pedido de acesso e a confirmação dele, e as telas de senha nova da P08)
 const rotasPublicas = [
+  // [entrada nova] "/" = página Conheça o FGRC-M e "/entrar" = Login da Nicole
   "/",
+  "/entrar",
   "/solicitar-acesso",
   "/explore",
   "/criar-nova-senha",
@@ -78,6 +82,8 @@ const rotasPublicas = [
   "/situacao-pedido",
   // [integração] privacidade e termos tem que dar pra ler antes de pedir acesso
   "/privacidade",
+  // [entrada nova] endereço antigo da apresentação (só redireciona pra "/")
+  "/sobre",
   // [integração] a área administrativa tem login próprio, então abre sem login do app
   // (quem barra conta comum é o banco + a função admin-fgrcm, não essa lista)
   "/admin",
@@ -102,6 +108,7 @@ export default function AppNavigation({ children, logado }: Props) {
 
   useEffect(() => {
     // manda pro login (o replace tira a tela bloqueada do histórico)
+    // [entrada nova] "/" agora é a página inicial pública, que tem o botão "Entrar no FGRC-M"
     if (bloqueada) router.replace("/" as Href);
   }, [bloqueada, router]);
 

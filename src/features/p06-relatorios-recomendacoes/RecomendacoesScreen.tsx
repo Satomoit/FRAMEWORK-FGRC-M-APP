@@ -2,7 +2,8 @@
 import React, { useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { generateReportPdf } from './pdf';
+// [correção Android] o botão daqui também salva o PDF de verdade (escolhendo a pasta no Android)
+import { baixarRelatorioPdf } from './pdf';
 import { radius, useCoresP06, type CoresP06 } from './theme';
 import { Recommendation, Report } from './types';
 
@@ -21,13 +22,20 @@ export function RecomendacoesScreen({
   const colors = useCoresP06();
   const styles = useMemo(() => criarEstilos(colors), [colors]);
   const [loading, setLoading] = useState(false);
+  // [correção Android] mostra onde o PDF foi salvo (ou por que não salvou)
+  const [aviso, setAviso] = useState('');
 
   async function handlePdf() {
+    if (loading) return;
+    setAviso('');
     try {
       setLoading(true);
-      await generateReportPdf(report, recommendations);
+      const resultado = await baixarRelatorioPdf(report, recommendations);
+      if (resultado.mensagem) setAviso(resultado.mensagem);
     } catch {
       Alert.alert('Erro', 'Não foi possível gerar o PDF. Tente novamente.');
+      // no navegador o Alert não aparece, então mostra aqui também
+      setAviso('Não foi possível gerar o PDF. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -86,8 +94,10 @@ export function RecomendacoesScreen({
         disabled={loading}
         accessibilityRole="button"
       >
-        <Text style={styles.buttonText}>{loading ? 'Gerando PDF...' : 'Gerar PDF'}</Text>
+        <Text style={styles.buttonText}>{loading ? 'Gerando PDF...' : 'Baixar PDF'}</Text>
       </Pressable>
+      {/* [correção Android] aviso de onde salvou (aparece também no navegador) */}
+      {aviso ? <Text style={styles.subtitle} accessibilityLiveRegion="polite">{aviso}</Text> : null}
     </ScrollView>
   );
 }

@@ -2,7 +2,7 @@
   "expo": {
     "name": "FGRC-M",
     "slug": "fgrc-m-inicial",
-    "version": "1.0.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "fgrcminicial",
@@ -19,10 +19,11 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "br.pucminas.fgrcm"
+      "package": "br.pucminas.fgrcm",
+      "versionCode": 3
     },
     "web": {
-      "output": "server",
+      "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [

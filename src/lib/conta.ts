@@ -45,6 +45,19 @@ export function dadosDaConta(user: User): DadosDaConta {
   };
 }
 
+// [segurança] confere se a conta foi liberada pela equipe do FGRC-M
+// conta aprovada sempre ganha a prefeitura no app_metadata (quem grava é a função admin-fgrcm,
+// com a chave do servidor), e a conta da administração tem o fgrcm_papel = admin
+// o app_metadata a pessoa não consegue mudar sozinha, então dá pra confiar nele
+// isso aqui é uma camada a mais: a trava de verdade é deixar o cadastro público DESLIGADO no Supabase
+// (Authentication > Sign In / Providers > Allow new users to sign up), pq com ele ligado
+// alguém poderia criar conta direto pela API sem passar pela aprovação
+export function contaLiberada(user: User): boolean {
+  const admin = (user.app_metadata ?? {}) as Metadados;
+  const temPrefeitura = typeof admin.prefeitura === 'string' && admin.prefeitura.trim() !== '';
+  return temPrefeitura || admin.fgrcm_papel === 'admin';
+}
+
 // [integração] a função eAdmin (que olhava o app_metadata) saiu daqui de propósito
 // agora quem é admin fica na tabela public.administradores e quem confere é o banco
 // (função estado_admin_fgrcm, usada em src/lib/admin.ts). Assim não tem duas regras diferentes

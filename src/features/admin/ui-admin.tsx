@@ -4,12 +4,12 @@ import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { useFgrcTheme } from '@/components/fgrc-colors';
+import { dataHoraDa } from '@/lib/datas';
 
-// data e hora no fuso do aparelho (ex: 18/11/2026 às 14:05)
+// data e hora no fuso do aparelho (ex: 18/11/2026 às 14:05), igual ao PDF
+// vazio (pedido ainda não decidido, por exemplo) vira "—"
 export function dataHora(iso: string | null | undefined): string {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  return `${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+  return iso ? dataHoraDa(iso) : '—';
 }
 
 // procura o texto em vários campos ao mesmo tempo, sem ligar pra maiúscula ou acento

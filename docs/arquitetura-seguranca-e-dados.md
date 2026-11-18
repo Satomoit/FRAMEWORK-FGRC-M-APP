@@ -54,6 +54,9 @@ Requisitos RNF-001 e RNF-002: as respostas e os resultados das avaliações não
 | Senha | Supabase Auth (guardada com hash; o app nunca guarda) | Sim (só no login) |
 | Pedido de acesso | Tabela `access_requests` | Sim |
 | Mensagem de suporte | Tabela `support_requests` | Sim |
+| Resposta da equipe ao suporte (versão 1.1.0) | Tabela `support_replies`; a pessoa lê pela função `meus_chamados_fgrcm` | Sim (escrita pela administração) |
+| Manutenção e versões do app (versão 1.1.0) | Tabelas `sistema_status` e `app_versoes`; o app lê pela função `estado_do_sistema_fgrcm` | Não sai nada do aparelho: o app só pergunta |
+| Pasta escolhida para salvar o PDF (Android) | AsyncStorage, chave `fgrcm:pdf:ultima-pasta` | Não |
 | Decisões da administração | Tabela `admin_audit_logs` | Sim |
 
 Verificação no código: nenhum arquivo envia `respostas`, `avaliacoes` ou o histórico ao Supabase. As únicas gravações no banco feitas pelo app são `access_requests` (pedido), `support_requests` (suporte e mudança de status pela administração) e as chamadas à função `admin-fgrcm`.
@@ -103,6 +106,16 @@ Ninguém consegue inserir ou alterar esta tabela pelo app ou pela API. Ela só m
 `id`, `criado_em`, `admin_id`, `admin_email`, `acao` (ex.: `pedido_recusado`, `suporte_resolvido`, `conta_desativada`), `tabela`, `registro_id`, `de`, `para`, `detalhes`.
 Só a administração lê. Ninguém escreve direto: as linhas são criadas pelos gatilhos do banco ou pela função `admin-fgrcm`.
 
+### 4.4.1 Tabelas da versão 1.1.0
+
+| Tabela | Colunas principais | Quem lê | Quem escreve |
+|---|---|---|---|
+| `support_replies` | `chamado_id`, `texto`, `autor_id`, `autor_email`, `criado_em` | Administração; a pessoa só pelas suas chamadas em `meus_chamados_fgrcm()` | Administração (só `chamado_id` e `texto`; autor e horário o banco grava) |
+| `sistema_status` (uma linha) | `manutencao_ativa`, `mensagem`, `previsao_retorno`, `plataformas`, carimbo de quem mudou | Administração; todos pela `estado_do_sistema_fgrcm()` | Administração |
+| `app_versoes` (uma linha por plataforma) | `versao_atual`, `versao_minima`, `obrigatoria`, `url_atualizacao` (só `https`), `mensagem`, `notas`, `publicada_em`, carimbo | Administração; todos pela `estado_do_sistema_fgrcm()` | Administração |
+
+Detalhes de funcionamento: `docs/manutencao-atualizacao-suporte-pdf.md`.
+
 ### 4.5 Funções do banco
 
 | Função | Quem pode chamar | O que faz |
@@ -113,6 +126,10 @@ Só a administração lê. Ninguém escreve direto: as linhas são criadas pelos
 | `fgrcm_limitar_envios()` | gatilho | Limites contra spam (ver 5.4) |
 | `fgrcm_antes_de_decidir_pedido()` e `fgrcm_registrar_decisao_pedido()` | gatilho | Preenchem quem decidiu e gravam o histórico |
 | `fgrcm_antes_de_atualizar_suporte()` e `fgrcm_registrar_status_suporte()` | gatilho | Preenchem quem atendeu e gravam o histórico |
+| `meus_chamados_fgrcm()` | contas logadas | Devolve só os chamados da própria conta (pelo token, sem receber id), com respostas e histórico, sem dados internos |
+| `estado_do_sistema_fgrcm(plataforma)` | qualquer pessoa | Diz se há manutenção para a plataforma e a configuração de versão (só dados públicos) |
+| `fgrcm_encerrar_sessoes(user)` | só o servidor (`service_role`) | Apaga as sessões abertas de uma conta desativada |
+| `fgrcm_antes_de_responder_chamado()`, `fgrcm_depois_de_responder_chamado()`, `fgrcm_carimbar_atualizacao()`, `fgrcm_registrar_mudanca_sistema()` | gatilho (não podem ser chamadas pela API) | Autor e horário das respostas, chamado para "em atendimento", carimbo de quem mudou manutenção/versão e histórico |
 
 ### 4.6 Migrações (na ordem)
 
@@ -121,9 +138,13 @@ Só a administração lê. Ninguém escreve direto: as linhas são criadas pelos
 | `20261118033656_fgrcm_pedidos_de_acesso.sql` | Tabela de pedidos, RLS de inserção, um pendente por e-mail |
 | `20261118033659_fgrcm_suporte.sql` | Tabela de suporte, RLS de inserção |
 | `20261118033712_fgrcm_admin.sql` | Primeira versão da permissão de admin (por `app_metadata`), substituída pela seguinte |
-| `20261118050000_fgrcm_admin_auditoria.sql` | Tabela `administradores`, regra de MFA, auditoria, status novos do suporte, limites de envio, `situacao_do_pedido` |
+| `20261118042102_fgrcm_admin_auditoria.sql` | Tabela `administradores`, regra de MFA, auditoria, status novos do suporte, limites de envio, `situacao_do_pedido` |
 
-As quatro migrações estão aplicadas no projeto Supabase do grupo. Nenhuma delas apaga dados.
+| `20261118132205_fgrcm_chamados_manutencao_versoes.sql` | `support_replies`, `meus_chamados_fgrcm`, `sistema_status`, `app_versoes`, `estado_do_sistema_fgrcm` e gatilhos |
+| `20261118132211_fgrcm_encerrar_sessoes_ao_desativar.sql` | `fgrcm_encerrar_sessoes` |
+| `20261118132313_fgrcm_gatilhos_sem_execucao_publica.sql` | Tira a execução pela API das funções de gatilho |
+
+As sete migrações estão aplicadas no projeto Supabase do grupo. Nenhuma delas apaga dados. (A quarta foi registrada no Supabase como `20261118042102`; o arquivo com o nome antigo `20261118050000_...` é renomeado com `git mv` no commit de arrumação.)
 
 ## 5. Autenticação e autorização
 
@@ -173,8 +194,9 @@ Para tirar a permissão: `update public.administradores set ativo = false where 
 |---|---|
 | `aprovar` (`modo` = `senha` ou `convite`) | Cria a conta e marca o pedido como aprovado |
 | `recusar` | Marca como recusado com o motivo |
+| `novo_acesso` (`modo` = `codigo`, `senha` ou `email`) | Novo código, nova senha provisória ou código por e-mail para quem perdeu o acesso |
 | `listar_usuarios` | Lista as contas do Supabase Auth |
-| `desativar_usuario` / `reativar_usuario` | Bloqueia ou libera o login da conta (não vale para admins nem para a própria conta) |
+| `desativar_usuario` / `reativar_usuario` | Bloqueia ou libera o login da conta (não vale para admins nem para a própria conta). Desde a versão 3 da função, desativar também encerra as sessões abertas |
 
 Antes de qualquer ação, a função chama `estado_admin_fgrcm()` com o token da própria pessoa. Se a resposta não for `ok`, devolve 401 ou 403.
 A função antiga `aprovar-pedido` foi substituída por uma versão que só responde 410 (desativada) e pode ser apagada no painel.

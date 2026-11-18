@@ -22,6 +22,8 @@ export default function Avaliacoes() {
   const [respostas, setRespostas] = useState<Respostas>({});
   const [carregando, setCarregando] = useState(true);
   const [aviso, setAviso] = useState('');
+  // [integração] o aviso de "Avaliação salva!" aparecia em vermelho igual erro, agora fica verde
+  const [avisoEhSucesso, setAvisoEhSucesso] = useState(false);
 
   useEffect(() => {
     let ativo = true;
@@ -42,6 +44,7 @@ export default function Avaliacoes() {
     if (carregando) return;
     // quando muda uma resposta guarda no armazenamento local automaticamente
     salvarRascunho(respostas).catch(() => {
+      setAvisoEhSucesso(false);
       setAviso('Não consegui salvar as respostas neste aparelho');
     });
   }, [respostas, carregando]);
@@ -55,7 +58,7 @@ export default function Avaliacoes() {
       <Text style={[styles.aviso, { backgroundColor: colors.infoBackground, color: colors.text }]}>
 Avaliação em andamento: as respostas são salvas neste aparelho; ao finalizar, os resultados e o PDF serão calculados a partir delas
       </Text>
-      {aviso ? <Text style={[styles.alerta, { color: colors.error }]}>{aviso}</Text> : null}
+      {aviso ? <Text style={[styles.alerta, { color: avisoEhSucesso ? colors.success : colors.error }]}>{aviso}</Text> : null}
       {tela === 'lista' ? (
         <AvaliacoesScreen
           respostas={respostas}
@@ -81,8 +84,10 @@ Avaliação em andamento: as respostas são salvas neste aparelho; ao finalizar,
               await finalizarAvaliacao(respostas, prefeitura);
               await limparRascunho();
               setRespostas({});
+              setAvisoEhSucesso(true);
               setAviso('Avaliação salva! O resultado e o PDF estão disponíveis nas abas correspondentes.');
             } catch (error) {
+              setAvisoEhSucesso(false);
               setAviso('Falha ao salvar a avaliação. As respostas continuam no rascunho.');
               // devolve o erro pra P03 não anunciar conclusão sem salvar de verdade
               throw error;

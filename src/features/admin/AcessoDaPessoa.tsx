@@ -114,7 +114,12 @@ export function NovoAcesso({ email, userId, pedidoId, onGerado }: {
       {aviso ? <Notice message={aviso.texto} kind={aviso.tipo} onClose={() => setAviso(null)} /> : null}
       {gerado ? <CaixaDeAcesso acesso={gerado} onFechar={() => setGerado(null)} /> : null}
 
-      <FgrcButton label={ocupado ? 'Aguarde...' : 'Gerar código de ativação'} disabled={ocupado} onPress={() => { void gerar('codigo'); }} />
+      {/* [correção Android] e-mail primeiro: o código chega só pra dona do e-mail */}
+      <FgrcButton label={ocupado ? 'Aguarde...' : 'Enviar código por e-mail'} disabled={ocupado} onPress={() => { void gerar('email'); }} />
+      <Text style={[styles.texto, { color: colors.muted }]}>
+        Recomendado. Se mandar de novo em menos de 1 minuto, o Supabase recusa: espere e tente outra vez.
+      </Text>
+      <FgrcButton label={ocupado ? 'Aguarde...' : 'Gerar código de ativação'} variant="outlined" disabled={ocupado} onPress={() => { void gerar('codigo'); }} />
       {confirmarSenha ? (
         <View style={styles.acoes}>
           <Text style={{ color: colors.text }}>
@@ -126,9 +131,8 @@ export function NovoAcesso({ email, userId, pedidoId, onGerado }: {
       ) : (
         <FgrcButton label="Gerar nova senha provisória" variant="outlined" disabled={ocupado} onPress={() => setConfirmarSenha(true)} />
       )}
-      <FgrcButton label="Enviar código por e-mail" variant="outlined" disabled={ocupado} onPress={() => { void gerar('email'); }} />
       <Text style={[styles.texto, { color: colors.muted }]}>
-        O envio por e-mail só funciona com o SMTP configurado no Supabase. O código gerado aqui funciona sem e-mail.
+        O código gerado aqui e a senha provisória aparecem na tela para você passar à pessoa (funcionam sem e-mail).
       </Text>
       <Pressable accessibilityRole="button" onPress={() => { setAberto(false); setAviso(null); setGerado(null); }}>
         <Text style={[styles.link, { color: colors.blue }]}>Fechar</Text>

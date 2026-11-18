@@ -1,8 +1,9 @@
 // Tela 15 - Relatórios
 import React, { useMemo, useState } from 'react';
-import { Alert, Platform, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { generateReportPdf } from './pdf';
+// [correção Android] três ações separadas com o mesmo arquivo PDF (antes "Gerar PDF" já abria o compartilhar)
+import { abrirRelatorioPdf, baixarRelatorioPdf, compartilharRelatorioPdf, type ResultadoPdf } from './pdf';
 import { FgrcButton } from '@/components/fgrc-ui';
 import { radius, useCoresP06, type CoresP06 } from './theme';
 import { Report } from './types';
@@ -20,46 +21,31 @@ export function RelatoriosScreen({ reports, recommendationsFor, onOpenReport, on
   const colors = useCoresP06();
   const styles = useMemo(() => criarEstilos(colors), [colors]);
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  // [correção Android] qual botão ta trabalhando (pra mostrar "Gerando..." só nele)
+  const [acaoAtual, setAcaoAtual] = useState<Acao | null>(null);
   // [integração] aviso que aparece na própria tela (o Alert não aparece no navegador)
   const [aviso, setAviso] = useState('');
 
-  async function handlePdf(report: Report) {
+  // [correção Android] Baixar, Abrir e Compartilhar usam o PDF de verdade (o mesmo nos três)
+  // o aviso embaixo do título conta o que aconteceu (ex: em qual pasta salvou)
+  async function handlePdf(report: Report, acao: Acao) {
+    if (loadingId) return;
+    setAviso('');
     try {
       setLoadingId(report.id);
-      await generateReportPdf(report, recommendationsFor(report));
-    } catch {
+      setAcaoAtual(acao);
+      const fazer = acao === 'baixar' ? baixarRelatorioPdf : acao === 'abrir' ? abrirRelatorioPdf : compartilharRelatorioPdf;
+      const resultado: ResultadoPdf = await fazer(report, recommendationsFor(report));
+      if (resultado.mensagem) setAviso(resultado.mensagem);
+    } catch (erro) {
+      // fechou a janela de compartilhar: não é erro, então não mostra nada
+      if (erro instanceof Error && erro.name === 'AbortError') return;
       Alert.alert('Erro', 'Não foi possível gerar o PDF. Tente novamente.');
       // [integração] no navegador o Alert não aparece, então mostra aqui também
       setAviso('Não foi possível gerar o PDF. Tente novamente.');
     } finally {
       setLoadingId(null);
-    }
-  }
-
-  // [integração] o Share do React Native não existe no navegador e derrubava a tela
-  // no celular continua igual; no navegador usa o compartilhar do próprio navegador
-  // e se ele não tiver, copia o resumo pra vc colar onde quiser
-  async function handleShare(report: Report) {
-    const message = `FGRC-M • Avaliação de ${report.date}: ${report.index} ${report.score}/100 (${report.classification}).`;
-    setAviso('');
-    try {
-      if (Platform.OS !== 'web') {
-        await Share.share({ message });
-        return;
-      }
-      const nav = globalThis.navigator as Navigator | undefined;
-      if (nav?.share) {
-        await nav.share({ text: message });
-      } else if (nav?.clipboard) {
-        await nav.clipboard.writeText(message);
-        setAviso('Resumo copiado. Agora é só colar onde você quiser. Para enviar o relatório completo, use Baixar PDF.');
-      } else {
-        setAviso('Este navegador não permite compartilhar. Use Baixar PDF e envie o arquivo.');
-      }
-    } catch (erro) {
-      // se a pessoa fechar a janela de compartilhar não é erro, então não mostra nada
-      if (erro instanceof Error && erro.name === 'AbortError') return;
-      setAviso('Não foi possível compartilhar agora. Use Baixar PDF e envie o arquivo.');
+      setAcaoAtual(null);
     }
   }
 
@@ -93,26 +79,36 @@ export function RelatoriosScreen({ reports, recommendationsFor, onOpenReport, on
             <Ionicons name="chevron-forward" size={22} color={colors.primary} />
           </Pressable>
 
-          <View style={[styles.row, { marginTop: 16 }]}>
-            <Pressable
-              style={styles.action}
-              onPress={() => handlePdf(r)}
-              disabled={loadingId === r.id}
-              accessibilityRole="button"
-            >
-              <Ionicons name="download-outline" size={20} color={colors.primary} />
-              <Text style={styles.actionText}>{loadingId === r.id ? 'Gerando...' : 'Gerar PDF'}</Text>
-            </Pressable>
-            <Pressable style={styles.action} onPress={() => handleShare(r)} accessibilityRole="button">
-              <Ionicons name="share-social-outline" size={20} color={colors.primary} />
-              <Text style={styles.actionText}>Compartilhar</Text>
-            </Pressable>
+          {/* [correção Android] eram 2 botões (Gerar PDF abria o compartilhar e Compartilhar mandava só um texto)
+              agora são 3, cada um faz uma coisa só, sempre com o arquivo PDF completo */}
+          <View style={[styles.row, styles.acoes]}>
+            {ACOES.map((a) => (
+              <Pressable
+                key={a.acao}
+                style={styles.action}
+                onPress={() => { void handlePdf(r, a.acao); }}
+                disabled={loadingId !== null}
+                accessibilityRole="button"
+                accessibilityLabel={`${a.rotulo} o relatório de ${r.date}`}
+              >
+                <Ionicons name={a.icone} size={20} color={colors.primary} />
+                <Text style={styles.actionText}>{loadingId === r.id && acaoAtual === a.acao ? 'Gerando...' : a.rotulo}</Text>
+              </Pressable>
+            ))}
           </View>
         </View>
       ))}
     </ScrollView>
   );
 }
+
+// [correção Android] os três botões do PDF
+type Acao = 'baixar' | 'abrir' | 'compartilhar';
+const ACOES: { acao: Acao; rotulo: string; icone: 'download-outline' | 'open-outline' | 'share-social-outline' }[] = [
+  { acao: 'baixar', rotulo: 'Baixar PDF', icone: 'download-outline' },
+  { acao: 'abrir', rotulo: 'Abrir', icone: 'open-outline' },
+  { acao: 'compartilhar', rotulo: 'Compartilhar', icone: 'share-social-outline' },
+];
 
 // [integração] os estilos viraram uma função pra receber as cores do tema que ta ativo
 const criarEstilos = (colors: CoresP06) => StyleSheet.create({
@@ -134,5 +130,7 @@ const criarEstilos = (colors: CoresP06) => StyleSheet.create({
   divider: { height: 1, backgroundColor: colors.divider, marginVertical: 14 },
   link: { fontSize: 16, fontWeight: '700', color: colors.primary },
   action: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  // [correção Android] 3 botões: quebram linha sozinhos em celular estreito
+  acoes: { marginTop: 16, flexWrap: 'wrap', rowGap: 12, columnGap: 16, justifyContent: 'flex-start' },
   actionText: { fontSize: 14, fontWeight: '700', color: colors.primary },
 });

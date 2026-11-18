@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState, type ComponentRef, useMemo } from "react";
 import {
   ActivityIndicator,
   Keyboard,
@@ -17,12 +17,18 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 // [integração P02] cliente do Supabase (só a chave pública, nenhuma chave secreta no app)
+import { useCorDoTema, type CorDoTema } from "@/components/cor-do-tema";
 import { supabase } from "@/lib/supabase";
 // [integração P02] só aceita e-mail de prefeitura (e @gmail.com enquanto a gente testa)
 import { problemaNoEmailInstitucional } from "@/lib/email-institucional";
 import { plataformaDoPedido } from "@/lib/plataforma";
+// [correção Android] lista de estados que abre por cima da tela (o teclado não cobre)
+import { SeletorDeEstado } from "@/components/seletor-uf";
 
 export default function SolicitarAcesso() {
+  // [tema] cores que seguem o tema escolhido (Configurações ou Opções da página inicial)
+  const { cor, escuro } = useCorDoTema();
+  const styles = useMemo(() => criarEstilos(cor), [cor]);
   const router = useRouter();
 
   const [nome, setNome] = useState("");
@@ -30,6 +36,11 @@ export default function SolicitarAcesso() {
   const [prefeitura, setPrefeitura] = useState("");
   const [municipio, setMunicipio] = useState("");
   const [estado, setEstado] = useState("");
+
+  // [correção Android] "próximo" do teclado pula pro campo de baixo (dá pra preencher só tocando)
+  const emailRef = useRef<ComponentRef<typeof TextInput>>(null);
+  const prefeituraRef = useRef<ComponentRef<typeof TextInput>>(null);
+  const municipioRef = useRef<ComponentRef<typeof TextInput>>(null);
 
   // [integração P02] mensagem na própria tela (o Alert não aparece no navegador)
   const [mensagem, setMensagem] = useState("");
@@ -111,15 +122,19 @@ export default function SolicitarAcesso() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar style="dark" />
+      <StatusBar style={escuro ? 'light' : 'dark'} />
 
+      {/* [correção Android] antes no Android não tinha "behavior" e o teclado cobria os campos de baixo
+          (o app desenha a tela inteira, até atrás das barras do sistema, então o Android não encolhe a tela sozinho)
+          com "padding" a área do formulário diminui do tamanho do teclado e dá pra rolar até o fim */}
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "web" ? undefined : "padding"}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
         >
           {/* Botão voltar */}
@@ -150,10 +165,13 @@ export default function SolicitarAcesso() {
               <TextInput
                 style={styles.input}
                 placeholder="Digite seu nome completo..."
-                placeholderTextColor="#65758B"
+                placeholderTextColor={cor("#65758B", "muted")}
                 value={nome}
                 onChangeText={setNome}
                 autoCapitalize="words"
+                returnKeyType="next"
+                submitBehavior="submit"
+                onSubmitEditing={() => emailRef.current?.focus()}
               />
             </View>
 
@@ -162,13 +180,18 @@ export default function SolicitarAcesso() {
               <Text style={styles.label}>E-mail institucional</Text>
 
               <TextInput
+                ref={emailRef}
                 style={styles.input}
                 placeholder="Digite seu e-mail institucional..."
-                placeholderTextColor="#65758B"
+                placeholderTextColor={cor("#65758B", "muted")}
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
                 autoCapitalize="none"
+                autoCorrect={false}
+                returnKeyType="next"
+                submitBehavior="submit"
+                onSubmitEditing={() => prefeituraRef.current?.focus()}
               />
             </View>
 
@@ -177,11 +200,15 @@ export default function SolicitarAcesso() {
               <Text style={styles.label}>Prefeitura</Text>
 
               <TextInput
+                ref={prefeituraRef}
                 style={styles.input}
                 placeholder="Digite o nome da prefeitura..."
-                placeholderTextColor="#65758B"
+                placeholderTextColor={cor("#65758B", "muted")}
                 value={prefeitura}
                 onChangeText={setPrefeitura}
+                returnKeyType="next"
+                submitBehavior="submit"
+                onSubmitEditing={() => municipioRef.current?.focus()}
               />
             </View>
 
@@ -190,11 +217,13 @@ export default function SolicitarAcesso() {
               <Text style={styles.label}>Município</Text>
 
               <TextInput
+                ref={municipioRef}
                 style={styles.input}
                 placeholder="Digite seu município..."
-                placeholderTextColor="#65758B"
+                placeholderTextColor={cor("#65758B", "muted")}
                 value={municipio}
                 onChangeText={setMunicipio}
+                returnKeyType="done"
               />
             </View>
 
@@ -202,12 +231,14 @@ export default function SolicitarAcesso() {
             <View style={styles.field}>
               <Text style={styles.label}>Estado</Text>
 
-              <TextInput
-                style={styles.input}
-                placeholder="Digite seu estado..."
-                placeholderTextColor="#65758B"
-                value={estado}
-                onChangeText={setEstado}
+              {/* [correção Android] era um campo de texto; virou uma lista com as 27 UFs */}
+              <SeletorDeEstado
+                valor={estado}
+                onChange={setEstado}
+                estiloCampo={styles.input}
+                estiloTexto={styles.inputTexto}
+                corPlaceholder={cor("#65758B", "muted")}
+                desabilitado={enviando}
               />
             </View>
 
@@ -226,19 +257,20 @@ export default function SolicitarAcesso() {
               disabled={enviando}
             >
               {enviando ? (
-                <ActivityIndicator color="#FFFFFF" accessibilityLabel="Enviando pedido" />
+                <ActivityIndicator color={cor("#FFFFFF", "sobreAzul")} accessibilityLabel="Enviando pedido" />
               ) : (
                 <Text style={styles.submitText}>Enviar solicitação</Text>
               )}
             </TouchableOpacity>
 
             {/* Voltar para login */}
+            {/* [entrada nova] agora quem abre esse formulário é a página inicial (Conheça o FGRC-M), então o texto mudou */}
             <TouchableOpacity
               style={styles.loginButton}
               activeOpacity={0.7}
               onPress={voltar}
             >
-              <Text style={styles.loginText}>Voltar para login</Text>
+              <Text style={styles.loginText}>Voltar para a página inicial</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -247,17 +279,20 @@ export default function SolicitarAcesso() {
   );
 }
 
-const styles = StyleSheet.create({
+// [tema] os estilos viraram uma função pra as cores seguirem o tema (claro, escuro e alto contraste)
+// tamanhos e espaçamentos não mudaram, e no tema claro as cores continuam as originais
+function criarEstilos(cor: CorDoTema) {
+  return StyleSheet.create({
   // [integração P02] texto de aviso/erro em cima do botão
   mensagem: {
     fontSize: 14,
     lineHeight: 20,
-    color: "#B42318",
+    color: cor("#B42318", "error"),
     marginBottom: 12,
   },
   safeArea: {
     flex: 1,
-    backgroundColor: "#F4F7FC",
+    backgroundColor: cor("#F4F7FC", "background"),
   },
 
   container: {
@@ -268,7 +303,12 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: 24,
     paddingTop: 4,
-    paddingBottom: 30,
+    // [correção Android] mais espaço no fim pro botão não colar na borda nem na barra de gestos
+    paddingBottom: 48,
+    // [correção] no computador o formulário não estica a tela toda
+    width: "100%",
+    maxWidth: 560,
+    alignSelf: "center",
   },
 
   backButton: {
@@ -281,7 +321,7 @@ const styles = StyleSheet.create({
 
   backArrow: {
     fontSize: 34,
-    color: "#152943",
+    color: cor("#152943", "text"),
     lineHeight: 36,
     fontWeight: "300",
   },
@@ -293,14 +333,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: "700",
-    color: "#172A43",
+    color: cor("#172A43", "text"),
     marginBottom: 3,
   },
 
   description: {
     fontSize: 13,
     lineHeight: 18,
-    color: "#536782",
+    color: cor("#536782", "muted"),
   },
 
   form: {
@@ -313,7 +353,7 @@ const styles = StyleSheet.create({
 
   label: {
     fontSize: 13,
-    color: "#152943",
+    color: cor("#152943", "text"),
     marginBottom: 5,
     fontWeight: "400",
   },
@@ -322,17 +362,24 @@ const styles = StyleSheet.create({
     height: 47,
     width: "100%",
     borderWidth: 1,
-    borderColor: "#71849C",
+    borderColor: cor("#71849C", "border"),
     borderRadius: 12,
     paddingHorizontal: 13,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: cor("#FFFFFF", "input"),
     fontSize: 13,
-    color: "#172A43",
+    color: cor("#172A43", "text"),
+  },
+
+  // [correção Android] texto do seletor de estado (mesma fonte dos outros campos)
+  inputTexto: {
+    fontSize: 13,
+    color: cor("#172A43", "text"),
+    flexShrink: 1,
   },
 
   submitButton: {
     height: 47,
-    backgroundColor: "#12558F",
+    backgroundColor: cor("#12558F", "blue"),
     borderRadius: 11,
     justifyContent: "center",
     alignItems: "center",
@@ -341,7 +388,7 @@ const styles = StyleSheet.create({
 
   submitText: {
     fontSize: 14,
-    color: "#FFFFFF",
+    color: cor("#FFFFFF", "sobreAzul"),
     fontWeight: "600",
   },
 
@@ -352,9 +399,10 @@ const styles = StyleSheet.create({
   },
 
   loginText: {
-    color: "#F07819",
+    color: cor("#F07819", "orange"),
     fontSize: 13,
     textDecorationLine: "underline",
     fontWeight: "500",
   },
 });
+}

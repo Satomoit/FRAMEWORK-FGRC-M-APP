@@ -51,7 +51,8 @@ export default function RecuperarSenha() {
   const [email, setEmail] = useState('');
 
   // voltar sempre leva pro login (mesmo se a pessoa abriu essa página direto pelo endereço)
-  const voltarLogin = () => router.replace('/');
+  // [entrada nova] o Login agora fica em /entrar ("/" virou a página Conheça o FGRC-M)
+  const voltarLogin = () => router.replace('/entrar');
 
   if (etapa === 'verificar') {
     return (

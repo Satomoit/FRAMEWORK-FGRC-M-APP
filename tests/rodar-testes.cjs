@@ -9,6 +9,13 @@ const testes = [
   'teste-calculo.cjs',
   'teste-resumo-inicio.cjs',
   'teste-armazenamento-por-conta.cjs',
+  'teste-email.cjs',
+  // [correção Android] versão mínima e nome do PDF
+  'teste-versao.cjs',
+  'teste-nome-pdf.cjs',
+  'teste-datas-digitadas.cjs',
+  // [segurança] só entra conta aprovada pela equipe (ou da administração)
+  'teste-conta-liberada.cjs',
 ];
 
 let falhas = 0;

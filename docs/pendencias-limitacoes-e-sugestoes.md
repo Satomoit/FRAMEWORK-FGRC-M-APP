@@ -11,11 +11,12 @@ Nenhuma delas pede para colar senha ou chave em lugar nenhum além do próprio p
 
 | # | O quê | Onde | Para quê |
 |---|---|---|---|
+| 0 | **Desligar o cadastro público** (feito pela Josiane; confirmado às 12:05) | Authentication > Sign In / Providers > *Allow new users to sign up* desligado > Save | Com ele ligado dá para criar conta pela API sem passar pela aprovação (B09, SEC-01 em `auditoria-seguranca-e-dependencias.md`). O app não usa cadastro público. Conferir em `/auth/v1/settings`: `"disable_signup": true` |
 | 1 | Apagar a função antiga | Edge Functions > `aprovar-pedido` > menu da função > Delete function | Hoje ela só responde "desativada" (410). Apagar evita confusão |
 | 2 | Regra de senha no servidor | Authentication > Sign In / Providers > Email > *Minimum password length* = **10** e *Password requirements* = **Lowercase, uppercase letters, digits and symbols** | O servidor passa a exigir a mesma regra do app. Antes, confira se a senha da conta admin já segue a regra (contas com senha fraca recebem aviso de senha fraca ao entrar) |
 | 3 | Proteção contra senhas vazadas | Mesma tela, *Prevent use of leaked passwords* | O Security Advisor avisa que está desligada. Segundo a documentação do Supabase, só existe nos planos pagos (Pro ou maior). No plano gratuito fica como limitação |
 | 4 | Envio de e-mail próprio (SMTP) com Gmail | Authentication > Emails > SMTP Settings. Passo a passo em `docs/configurar-email-gmail-supabase.md` | O envio padrão só entrega para e-mails da equipe do projeto e 2 por hora. Com o Gmail funcionam o convite por código e a recuperação de senha para qualquer e-mail; o limite passa para 30 por hora (Authentication > Rate Limits) |
-| 5 | Modelos de e-mail | Authentication > Emails > Templates > *Invite user*, *Magic Link* e *Reset password*. Textos prontos no mesmo documento | Colocar `{{ .Token }}` no texto para a pessoa receber o código que digita em "Ativar acesso" |
+| 5 | Modelos de e-mail | Authentication > Emails > Templates > *Invite user*, *Magic Link* e *Reset password*. Textos prontos no mesmo documento | Colocar `{{ .Token }}` no texto para a pessoa receber o código que digita em "Ativar acesso". **Conferir que *Invite user* e *Magic Link* não têm `{{ .ConfirmationURL }}`** (o link de acesso foi retirado; ver seção 3) |
 | 6 | Endereços permitidos do link de senha | Authentication > URL Configuration > Redirect URLs | Adicionar `http://localhost:8081/criar-nova-senha` (navegador) e `fgrcminicial://criar-nova-senha` (APK). No Expo Go o endereço começa com `exp://` e muda com o IP |
 | 7 | Verificação em duas etapas | Authentication > Multi-Factor | Conferir se **TOTP** está habilitado (vem ligado por padrão) |
 
@@ -46,12 +47,29 @@ Novo APK (depois dos commits): `npx eas-cli build -p android --profile preview`.
 | RNF-010 explicação dos termos | Parcial | Glossário curto nas perguntas (ex.: backup, MFA, firewall) |
 | RNF-006 sem internet | Implementado, não testado | Testar em modo avião depois do login |
 | Telas avulsas da P04 e da P10 | Sem link | `/revisar-avaliacao`, `/avaliacao-finalizada`, `/editar-perfil` e `/alteracoes-salvas` têm dados fixos. A revisão e a edição reais estão na P03 e na P09. Decidir com os autores se ficam como registro ou se saem |
-| Cores fixas em algumas telas | Visual | Login, Solicitar acesso e Solicitação enviada não mudam no modo escuro. Resultados, Relatórios, Recomendações e o aviso de Avaliações já seguem o tema |
+| Cores fixas em algumas telas | Corrigido na 1.2.0 (B10) | Login, Solicitar acesso, Solicitação enviada, Criar nova senha, Senha alterada e a lista de estados passaram a seguir o tema. Falta conferir no Android (CT93–CT96) |
 | `mockData.ts` da P05 e da P06 | Sem uso | Continuam exportados no `index.ts` das pastas, mas nenhuma rota usa |
 | Consulta da situação do pedido | Limitação conhecida | Quem souber um e-mail descobre se existe pedido e em que situação (não vê nenhum outro dado). Aceito para o MVP |
 | Senha provisória | Limitação conhecida | A administração vê a senha uma vez. O app obriga a troca no primeiro acesso |
-| Desativar conta | Limitação | Bloqueia novos logins. Uma sessão já aberta continua até o token expirar (cerca de 1 hora) |
+| Desativar conta | Limitação menor (versão 3 da função) | Bloqueia novos logins e apaga as sessões abertas (a renovação para na hora). O acesso que já tinha sido entregue ao celular ainda vale até vencer, no máximo 1 hora |
+| Link de acesso por e-mail (Magic Link) | Retirado da entrega | No Android o link era aceito, mas ia para o Site URL (`localhost`) e a sessão se perdia. Para voltar a usar: cadastrar um endereço de retorno do app (ex.: `fgrcminicial://entrar`) em Redirect URLs, mandar esse endereço no envio do código, criar a rota que recebe a sessão e decidir o que fazer quando o e-mail é aberto em outro aparelho. Até lá, só código de 6 números |
+| APK 1.0.0 já instalado | Limitação | Não tem a verificação de manutenção e versão mínima, então não pode ser bloqueado à distância. Pedir para atualizar manualmente |
+| Atualização pelo ar (EAS Update) | Não configurado | `expo-updates` não está instalado. Toda mudança exige APK novo. Se for configurar: `npx expo install expo-updates`, `eas update:configure`, definir `runtimeVersion` e gerar um APK novo antes de usar `eas update` (mudança nativa sempre exige APK) |
+| Pasta Download no Android 11+ | Limitação do Android | O seletor de pastas não deixa usar a raiz de Download; escolher ou criar uma subpasta (ex.: `Download/FGRC-M`) |
+| Aviso por e-mail quando a equipe responde o suporte | Não implementado | A resposta fica em Meus chamados. Mandar e-mail automático exigiria uma função no servidor com o SMTP |
+| Meus chamados para mensagens sem login | Limitação | Mensagens enviadas pela tela de entrada não aparecem (não dá para provar de quem são); a resposta é por e-mail |
 | Excluir conta | Não implementado | Hoje: pedido pelo suporte e desativação pela administração |
+| Posse do e-mail nos modos código e senha provisória | Limitação conhecida | O app não confirma sozinho que a pessoa é dona do e-mail; quem aprova deve mandar o código ou a senha pelo próprio e-mail da pessoa ou por um contato conhecido. No modo por e-mail o próprio e-mail confirma |
+| Lista de contas na administração | Limitação | Lê até 500 contas (suficiente para o MVP) |
+| Último login | Informação disponível | A aba Contas mostra a data do último login (Supabase Auth). Não existe registro de quem está usando o app agora |
+| Alertas do `npm audit` (36) | Para depois da entrega | Vêm de `picomatch` e `minimatch` nas ferramentas de build. **Não** usar `npm audit fix --force` (rebaixa o Expo). Plano em `auditoria-seguranca-e-dependencias.md`, seção 5 |
+| Domínios de e-mail aceitos no build | Decisão | O `eas.json` aceita `gov.br` e `gmail.com` para os testes. Numa implantação real, deixar só `gov.br` |
+| Campo Estado e trava de conta aprovada | Corrigido na 1.2.0 | Falta o reteste no Android (CT74, CT75, CT77, CT78) |
+| Tamanho do texto no celular | Parcial | A barrinha de tamanho do texto vale no app inteiro no navegador. No celular, ela vale nas telas que já usavam a escala (página inicial, Opções, Home, Configurações e outras dos integrantes); Login, pedido de acesso e telas de senha crescem só com a fonte do Android. Ajustar depois da entrega, tela por tela |
+| Telas avulsas sem link | Visual | `/revisar-avaliacao`, `/avaliacao-finalizada`, `/editar-perfil` e `/alteracoes-salvas` continuam com cores fixas (não aparecem no app) |
+| Material de testes | Fora deste repositório | Fica na documentação da equipe até a revisão e a transferência para o repositório acadêmico |
+| Dependências do modelo sem uso | Para depois da entrega | `@expo/ui`, `expo-device`, `expo-glass-effect`, `expo-symbols`, `expo-web-browser`. Tirar com `npm uninstall` e gerar APK novo |
+| Erro "Requiring unknown module" no Expo | Desenvolvimento | Aparece quando os arquivos mudam com o Expo ligado. Reiniciar com `npx expo start -c` |
 
 ## 4. Decisões que dependem do grupo ou do orientador
 
@@ -65,24 +83,8 @@ Novo APK (depois dos commits): `npx eas-cli build -p android --profile preview`.
 8. **Link "Área da administração" no Login**: existe porque no celular não há barra de endereço. Se o grupo preferir, é só apagar o bloco indicado no comentário do `LoginScreen.tsx`.
 9. **Telas avulsas da P04 e da P10** (ver seção 3).
 
-## 5. Sugestões para o repositório acadêmico (para você decidir se altera)
+## 5. Documentação acadêmica e créditos
 
-| Documento | Sugestão |
-|---|---|
-| `02-Especificação do Projeto.md`, RES-001 | Diz "Flutter, utilizando Dart". O app é React Native com Expo e TypeScript, como está na `03-Metodologia.md`. Corrigir uma das duas |
-| `02-Especificação do Projeto.md` | Incluir como requisitos complementares: área administrativa (aprovar/recusar pedidos, contas), suporte dentro do app, consulta da situação do pedido, privacidade e termos, verificação em duas etapas para a administração |
-| `03-Metodologia.md` | Registrar a fórmula do índice, as faixas e o critério de prioridade (depois da validação) |
-| `05-Arquitetura da Solução.md` | Pede `banco.sql` em `src\bd`. Dá para juntar as quatro migrações de `supabase/migrations/` nesse arquivo. Atualizar o diagrama com a função `admin-fgrcm` e as tabelas novas |
-| `08-Plano de Testes de Software.md` | Acrescentar os cenários CT23 a CT36 de `docs/plano-de-testes-mvp.md` |
-| `09-Registro de Testes de Software.md` | Está vazio. Usar os resultados de `docs/registro-de-testes-mvp.md` e os que vocês executarem |
-| `14-Registro de Atividades e Evidências.md` | Registrar a integração: área administrativa, segurança do banco, RF-003, documentação e testes, com o uso de IA (seção 6) |
-| `FGRC-M_ Formulário.pdf` | Conferir o "(0-0)" da 02-NET |
+Os documentos acadêmicos (planos e registros de testes, usabilidade, rastreabilidade, registros de cada etapa e a descrição do uso de ferramentas) ficam fora deste repositório, na documentação da equipe, para revisão antes de irem para o repositório acadêmico.
 
-## 6. Uso de ferramentas de IA (para declarar no trabalho)
-
-| Ferramenta | Onde foi usada | Revisão humana |
-|---|---|---|
-| Claude (Anthropic), pelo aplicativo Claude | Auditoria do código e da documentação, integração das telas, área administrativa, migrações e regras de segurança do Supabase, função `admin-fgrcm`, testes automáticos, execução dos testes de segurança e redação destes documentos | A responsável pela integração acompanhou as mudanças, testou no navegador, rodou `tsc` e `npm test` e decide o que vai para o GitHub. Os commits são feitos por ela |
-| ChatGPT (OpenAI) | **Preencher:** em que etapas foi usado (ex.: organização do diagnóstico inicial e das orientações) | **Preencher** |
-
-Os comentários de código marcados com `[integração]` indicam as partes escritas na integração. O restante é dos integrantes.
+Créditos: as telas são dos integrantes (tabela "Telas e autoria" no README). A integração foi conduzida pela Josiane, que definiu as tarefas, acompanhou as implementações, testou no computador e no celular e verificou os resultados. ChatGPT (OpenAI) e Claude (Anthropic) foram usados como ferramentas de apoio (explicações, revisão técnica, sugestões, geração e adaptação de trechos de código, depuração e documentação); em algumas etapas o Claude aplicou alterações nos arquivos sob orientação dela. Os comentários marcados com `[integração]`, `[correção Android]`, `[manutenção e atualização]`, `[entrada nova]`, `[tema]` e `[segurança]` indicam as partes escritas na integração.

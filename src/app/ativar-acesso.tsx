@@ -146,7 +146,7 @@ export default function AtivarAcesso() {
   return (
     <Page
       title="Ativar acesso"
-      subtitle="Quando a administração aprovar o seu pedido, você recebe um código (por e-mail ou direto da administração). Digite o código aqui para criar sua senha."
+      subtitle="Quando a administração aprovar o seu pedido, você recebe um código de 6 números (por e-mail ou direto da administração). Digite o código aqui para criar sua senha. Não é preciso tocar em nenhum link do e-mail."
       onBack={voltar}
     >
       <View style={styles.bloco}>
@@ -156,7 +156,8 @@ export default function AtivarAcesso() {
         {aviso ? <Notice message={aviso} kind="success" onClose={() => setAviso('')} /> : null}
         <FgrcButton label={ocupado ? 'Aguarde...' : 'Confirmar código'} disabled={ocupado} onPress={() => { void confirmarCodigo(); }} />
         <OrangeLink label="Não recebi o código / o código venceu" onPress={() => { void pedirCodigoNovo(); }} />
-        <OrangeLink label="Voltar para login" onPress={() => router.replace('/')} />
+        {/* [entrada nova] o Login agora fica em /entrar ("/" virou a página Conheça o FGRC-M) */}
+        <OrangeLink label="Voltar para login" onPress={() => router.replace('/entrar')} />
       </View>
     </Page>
   );

@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 
 import { useRouter } from 'expo-router';
 
@@ -10,11 +11,17 @@ import {
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useCorDoTema, type CorDoTema } from '@/components/cor-do-tema';
+
 export default function SenhaAlterada() {
+  // [tema] cores que seguem o tema escolhido (Configurações ou Opções da página inicial)
+  const { cor } = useCorDoTema();
+  const styles = useMemo(() => criarEstilos(cor), [cor]);
   const router = useRouter();
 
   function fazerLogin() {
-    router.replace('/');
+    // [entrada nova] o Login agora fica em /entrar ("/" virou a página Conheça o FGRC-M)
+    router.replace('/entrar');
   }
 
   return (
@@ -55,12 +62,15 @@ export default function SenhaAlterada() {
   );
 }
 
-const styles = StyleSheet.create({
+// [tema] os estilos viraram uma função pra as cores seguirem o tema (claro, escuro e alto contraste)
+// tamanhos e espaçamentos não mudaram, e no tema claro as cores continuam as originais
+function criarEstilos(cor: CorDoTema) {
+  return StyleSheet.create({
 
   // Fundo da tela
   container: {
     flex: 1,
-    backgroundColor: '#F4F7FC',
+    backgroundColor: cor('#F4F7FC', 'background'),
   },
 
   // Agrupamento dos elementos
@@ -77,7 +87,7 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: 29,
-    backgroundColor: '#CDE0D9',
+    backgroundColor: cor('#CDE0D9', 'sucessoFundo'),
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 14,
@@ -88,14 +98,14 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     borderWidth: 1.8,
-    borderColor: '#12633F',
+    borderColor: cor('#12633F', 'success'),
     justifyContent: 'center',
     alignItems: 'center',
   },
 
   check: {
     fontSize: 16,
-    color: '#12633F',
+    color: cor('#12633F', 'success'),
     fontWeight: '500',
     lineHeight: 19,
   },
@@ -104,7 +114,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 21,
     fontWeight: '600',
-    color: '#080B10',
+    color: cor('#080B10', 'text'),
     textAlign: 'center',
     marginBottom: 11,
   },
@@ -113,7 +123,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 13,
     fontWeight: '400',
-    color: '#52647C',
+    color: cor('#52647C', 'muted'),
     textAlign: 'center',
     lineHeight: 18,
     marginBottom: 12,
@@ -123,16 +133,17 @@ const styles = StyleSheet.create({
   button: {
     width: '100%',
     height: 47,
-    backgroundColor: '#10568F',
+    backgroundColor: cor('#10568F', 'blue'),
     borderRadius: 11,
     justifyContent: 'center',
     alignItems: 'center',
   },
 
   buttonText: {
-    color: '#FFFFFF',
+    color: cor('#FFFFFF', 'sobreAzul'),
     fontSize: 14,
     fontWeight: '500',
   },
 
 });
+}

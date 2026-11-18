@@ -88,7 +88,8 @@ export default function AbaContas() {
           <Linha rotulo="Prefeitura" valor={c.prefeitura} />
           <Linha rotulo="Município / Estado" valor={c.municipio || c.estado ? `${c.municipio ?? '—'} / ${c.estado ?? '—'}` : null} />
           <Linha rotulo="Conta criada em" valor={dataHora(c.criado_em)} />
-          <Linha rotulo="Último acesso" valor={c.ultimo_acesso ? dataHora(c.ultimo_acesso) : 'ainda não entrou'} />
+          {/* é a data do último login (last_sign_in_at do Supabase), não mostra quem ta online agora */}
+          <Linha rotulo="Último login" valor={c.ultimo_acesso ? dataHora(c.ultimo_acesso) : 'ainda não entrou'} />
           {/* [integração] perdeu a senha provisória ou o código? gera outro daqui (contas ativas, não admin) */}
           {!c.admin && !c.desativado ? <NovoAcesso email={c.email} userId={c.id} /> : null}
           {/* contas de admin não são alteradas por aqui (só pelo painel do Supabase) */}
@@ -96,7 +97,7 @@ export default function AbaContas() {
             confirmando === c.id ? (
               <View style={styles.acoes}>
                 <Text style={{ color: colors.text }}>
-                  {c.desativado ? 'Reativar esta conta?' : 'Desativar esta conta? A pessoa não vai conseguir entrar até ser reativada.'}
+                  {c.desativado ? 'Reativar esta conta?' : 'Desativar esta conta? As sessões abertas da pessoa são encerradas e ela não consegue entrar até ser reativada. As avaliações salvas no aparelho dela não são apagadas.'}
                 </Text>
                 <FgrcButton label={ocupado ? 'Aguarde...' : 'Sim, confirmar'} variant={c.desativado ? 'filled' : 'danger'} disabled={ocupado} onPress={() => { void trocar(c); }} />
                 <FgrcButton label="Cancelar" variant="outlined" onPress={() => setConfirmando(null)} />

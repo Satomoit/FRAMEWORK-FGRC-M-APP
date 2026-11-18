@@ -123,14 +123,20 @@ export default function AbaSolicitacoes() {
 
         {aberto.status === 'pendente' && !recusando ? (
           <View style={styles.acoes}>
-            <FgrcButton label={ocupado ? 'Aguarde...' : 'Aprovar com senha provisória'} disabled={ocupado} onPress={() => { void decidir('senha'); }} />
+            {/* [correção Android] o jeito mais seguro vem primeiro: o código vai direto pro e-mail da pessoa
+                (ninguém mais vê o código, e ainda confirma que o e-mail é dela mesmo)
+                os outros dois mostram o acesso na tela pra vc passar, então ficam como plano B */}
+            <FgrcButton label={ocupado ? 'Aguarde...' : 'Aprovar e enviar código por e-mail'} disabled={ocupado} onPress={() => { void decidir('convite'); }} />
+            <Text style={[styles.dica, { color: colors.muted }]}>
+              Recomendado. A pessoa recebe um código de 6 números no e-mail e cria a senha em "Ativar acesso".
+            </Text>
             {/* [integração] código que a administração passa pra pessoa (WhatsApp, telefone): funciona sem e-mail */}
             <FgrcButton label="Aprovar com código de ativação" variant="outlined" disabled={ocupado} onPress={() => { void decidir('codigo'); }} />
-            <FgrcButton label="Aprovar e enviar código por e-mail" variant="outlined" disabled={ocupado} onPress={() => { void decidir('convite'); }} />
+            <FgrcButton label="Aprovar com senha provisória" variant="outlined" disabled={ocupado} onPress={() => { void decidir('senha'); }} />
             <FgrcButton label="Recusar" variant="danger" disabled={ocupado} onPress={() => setRecusando(true)} />
             <Text style={[styles.dica, { color: colors.muted }]}>
-              Senha provisória e código de ativação aparecem na tela para você passar à pessoa.
-              O envio por e-mail só funciona com o SMTP configurado no Supabase.
+              Use o código de ativação ou a senha provisória só se o e-mail não chegar: eles aparecem na tela
+              para você passar à pessoa, então confira antes que o e-mail do pedido é mesmo dela.
             </Text>
           </View>
         ) : null}

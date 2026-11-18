@@ -8,7 +8,9 @@ Existem três jeitos. Para entregar e pedir para os amigos testarem, o melhor é
 | B. Link no navegador do celular | Android e iPhone | Não | Não: precisa publicar de novo |
 | C. Expo Go | Android e iPhone | Sim, com o Expo rodando | Sim, na hora |
 
-Antes de gerar o A ou o B, faça os commits (o que for gerado usa os arquivos da pasta naquele momento) e rode:
+> **Versão atual:** comandos de build e como instalar por cima sem perder as avaliações estão em `docs/versao-1.2.0-notas-e-build.md`.
+
+Antes de gerar o A ou o B, faça os commits (assim o APK fica ligado a um commit conhecido e dá para anotar no registro de testes qual código foi testado) e rode:
 ```powershell
 npx tsc --noEmit
 npm test
@@ -67,18 +69,18 @@ As avaliações ficam guardadas no navegador daquele celular. Se a pessoa limpar
 
 ## Como o amigo entra no app (passo a passo para mandar para ele)
 
-1. Abrir o app > **Solicitar acesso** > preencher (o e-mail precisa terminar em `gmail.com` ou `gov.br`) > Enviar.
+1. Abrir o app > página inicial (Conheça o FGRC-M) > **Solicitar acesso** > preencher (o e-mail precisa terminar em `gmail.com` ou `gov.br`) > Enviar.
 2. Esperar você aprovar.
 3. Você entra na área administrativa:
    - no computador: `http://localhost:8081/admin` (ou o link da opção B + `/admin`);
-   - no celular: tela de Login > link **Área da administração** no final.
+   - no celular: página inicial > **Opções** (no rodapé) > **Área da administração**.
 4. Solicitações > abre o pedido > escolha um jeito:
    - **Aprovar com código de ativação:** aparece um código de 6 números. Toque em **Enviar para a pessoa** (no celular abre o WhatsApp) ou **Copiar mensagem pronta** (no computador). O código vale por pouco tempo (1 hora).
    - **Aprovar com senha provisória:** aparece a senha. Mande do mesmo jeito. No primeiro acesso o app pede para criar uma senha nova.
    - **Aprovar e enviar código por e-mail:** só depois de configurar o Gmail (`docs/configurar-email-gmail-supabase.md`).
 5. O amigo:
-   - com código: tela de Login > **Seu pedido foi aprovado? Ativar acesso** > e-mail + código > cria a senha;
-   - com senha provisória: entra normalmente e troca a senha.
+   - com código: página inicial > **Ativar acesso** > e-mail + código > cria a senha;
+   - com senha provisória: página inicial > **Entrar no FGRC-M** > entra normalmente e troca a senha.
 6. **Perdeu o código ou a senha?** Na área administrativa, abra o pedido aprovado (ou a aba **Contas**) > **Novo acesso** > gere outro código ou outra senha. O anterior para de funcionar.
 
 Por que o código antigo não fica guardado para mostrar de novo: quem tivesse acesso ao banco conseguiria entrar na conta da pessoa. Gerar um novo é mais seguro e funciona igual.

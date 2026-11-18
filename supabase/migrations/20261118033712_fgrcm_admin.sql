@@ -2,7 +2,7 @@
 -- [integração] rode DEPOIS dos outros dois arquivos (pedidos de acesso e suporte)
 -- SQL Editor > New query > cole tudo > Run (pode rodar de novo sem problema)
 --
--- versão 1 (substituída pela 20261118050000): admin era quem tinha fgrcm_papel = admin no app_metadata
+-- versão 1 (substituída pela 20261118042102): admin era quem tinha fgrcm_papel = admin no app_metadata
 -- agora quem é admin fica na tabela public.administradores
 
 -- 1) função que responde "quem ta logado é admin?" (lê o crachá/JWT da sessão)

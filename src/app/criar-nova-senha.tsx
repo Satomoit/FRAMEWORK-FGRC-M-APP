@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 
 import {
   KeyboardAvoidingView,
@@ -16,10 +16,14 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 // [integração P08] troca de senha de verdade pelo Supabase e regra única de senha do app
+import { useCorDoTema, type CorDoTema } from "@/components/cor-do-tema";
 import { REGRA_SENHA_TEXTO, oQueFaltaNaSenha } from "@/lib/politica-senha";
 import { supabase } from "@/lib/supabase";
 
 export default function HomeScreen() {
+  // [tema] cores que seguem o tema escolhido (Configurações ou Opções da página inicial)
+  const { cor, escuro } = useCorDoTema();
+  const styles = useMemo(() => criarEstilos(cor), [cor]);
   const router = useRouter();
 
   // Armazenar as senhas digitadas
@@ -125,14 +129,15 @@ export default function HomeScreen() {
   }
 
   // [integração P08] agora volta pro login de verdade
+  // [entrada nova] que agora fica em /entrar ("/" virou a página Conheça o FGRC-M)
   function voltarLogin() {
-    router.replace("/");
+    router.replace("/entrar");
   }
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
       {/* deixa a barra de status com texto escuro */}
-      <StatusBar barStyle="dark-content" />
+      <StatusBar barStyle={escuro ? 'light-content' : 'dark-content'} />
 
       <KeyboardAvoidingView
         style={styles.keyboard}
@@ -165,7 +170,7 @@ export default function HomeScreen() {
             <TextInput
               style={styles.input}
               placeholder="Digite uma nova senha.."
-              placeholderTextColor="#718096"
+              placeholderTextColor={cor("#718096", "muted")}
               value={senha}
               onChangeText={setSenha}
               secureTextEntry
@@ -183,7 +188,7 @@ export default function HomeScreen() {
             <TextInput
               style={styles.input}
               placeholder="Digite a sua nova senha mais uma vez.."
-              placeholderTextColor="#718096"
+              placeholderTextColor={cor("#718096", "muted")}
               value={confirmarSenha}
               onChangeText={setConfirmarSenha}
               secureTextEntry
@@ -225,23 +230,26 @@ export default function HomeScreen() {
 }
 
 // ESTILIZAÇÃO DA TELA
-const styles = StyleSheet.create({
+// [tema] os estilos viraram uma função pra as cores seguirem o tema (claro, escuro e alto contraste)
+// tamanhos e espaçamentos não mudaram, e no tema claro as cores continuam as originais
+function criarEstilos(cor: CorDoTema) {
+  return StyleSheet.create({
   // [integração P08] texto da regra e mensagens de erro
   dica: {
     fontSize: 13,
     lineHeight: 19,
-    color: "#4A5568",
+    color: cor("#4A5568", "muted"),
     marginTop: 6,
   },
   mensagem: {
     fontSize: 14,
     lineHeight: 20,
-    color: "#B42318",
+    color: cor("#B42318", "error"),
     marginTop: 14,
   },
   container: {
     flex: 1,
-    backgroundColor: "#F4F7FC",
+    backgroundColor: cor("#F4F7FC", "background"),
   },
 
   keyboard: {
@@ -263,7 +271,7 @@ const styles = StyleSheet.create({
 
   backArrow: {
     fontSize: 34,
-    color: "#172B45",
+    color: cor("#172B45", "text"),
     lineHeight: 36,
     fontWeight: "300",
   },
@@ -275,13 +283,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: "600",
-    color: "#080B10",
+    color: cor("#080B10", "text"),
     marginBottom: 5,
   },
 
   subtitle: {
     fontSize: 13,
-    color: "#52647C",
+    color: cor("#52647C", "muted"),
     lineHeight: 18,
   },
 
@@ -291,7 +299,7 @@ const styles = StyleSheet.create({
 
   label: {
     fontSize: 13,
-    color: "#172B45",
+    color: cor("#172B45", "text"),
     marginBottom: 5,
   },
 
@@ -303,18 +311,18 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 47,
     borderWidth: 1,
-    borderColor: "#71839B",
+    borderColor: cor("#71839B", "border"),
     borderRadius: 11,
     paddingHorizontal: 13,
     fontSize: 13,
-    color: "#172B45",
-    backgroundColor: "#FFFFFF",
+    color: cor("#172B45", "text"),
+    backgroundColor: cor("#FFFFFF", "input"),
   },
 
   primaryButton: {
     width: "100%",
     height: 46,
-    backgroundColor: "#10568F",
+    backgroundColor: cor("#10568F", "blue"),
     borderRadius: 11,
     justifyContent: "center",
     alignItems: "center",
@@ -322,16 +330,17 @@ const styles = StyleSheet.create({
   },
 
   primaryButtonText: {
-    color: "#FFFFFF",
+    color: cor("#FFFFFF", "sobreAzul"),
     fontSize: 14,
     fontWeight: "500",
   },
 
   loginLink: {
-    color: "#F47716",
+    color: cor("#F47716", "orange"),
     textAlign: "center",
     fontSize: 13,
     textDecorationLine: "underline",
     marginTop: 10,
   },
 });
+}

@@ -7,16 +7,14 @@ import { RecomendacoesScreen } from '@/features/p06-relatorios-recomendacoes/Rec
 import type { Recommendation, Report } from '@/features/p06-relatorios-recomendacoes/types';
 import { listarAvaliacoes, type AvaliacaoRegistrada } from '@/lib/avaliacoes-reais';
 import { paraRelatorio, recomendacoesDaAvaliacao } from '@/lib/calcular-relatorio';
-import { dadosDaConta, linhaDaPrefeitura } from '@/lib/conta';
-import { supabase } from '@/lib/supabase';
+import { prefeituraDaSessao } from '@/lib/conta';
 import { useFgrcTheme } from '@/components/fgrc-colors';
 
-// [integração] monta "Prefeitura X - Município/UF" com os dados da conta (pro cabeçalho do PDF)
+// [integração] monta "Prefeitura: X - Município/UF" com os dados da conta (pro cabeçalho do PDF)
+// usa o mesmo leitor da finalização (conta.ts) em vez de repetir a lógica aqui
 // se a conta não tiver esses dados, volta null e o PDF só não mostra essa linha
 async function prefeituraDaConta(): Promise<string | null> {
-  const { data } = await supabase.auth.getUser();
-  if (!data.user) return null;
-  const linha = linhaDaPrefeitura(dadosDaConta(data.user));
+  const linha = await prefeituraDaSessao();
   return linha ? `Prefeitura: ${linha}` : null;
 }
 

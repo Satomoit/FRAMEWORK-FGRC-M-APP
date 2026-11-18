@@ -14,12 +14,14 @@ type Props = {
   onOpenPrivacy?: () => void;
   // [integração] abre a tela de Ajuda e suporte (só aparece quando alguém passar essa função)
   onOpenSupport?: () => void;
+  // [suporte] abre Meus chamados (só aparece quando alguém passar essa função)
+  onOpenTickets?: () => void;
   // link pro logout real quando tiver autenticação
   onSignOut?: () => void | Promise<void>;
 };
 
 // essa é a tela 17 do protótipo (menu Mais)
-export default function MenuMaisScreen({ onOpenProfile, onOpenSettings, onOpenPrivacy, onOpenSupport, onSignOut }: Props) {
+export default function MenuMaisScreen({ onOpenProfile, onOpenSettings, onOpenPrivacy, onOpenSupport, onOpenTickets, onSignOut }: Props) {
   // usa as cores do tema atual
   const { colors } = useFgrcTheme();
   // guarda os avisos dos botões que ainda dependem do grupo
@@ -51,6 +53,10 @@ export default function MenuMaisScreen({ onOpenProfile, onOpenSettings, onOpenPr
         {/* [integração] canal pra falar com a equipe do FGRC-M (problema, dúvida ou erro) */}
         {onOpenSupport ? (
           <MenuOption title="Ajuda e suporte" subtitle="Fale com a equipe do FGRC-M" symbol="help" onPress={onOpenSupport} />
+        ) : null}
+        {/* [suporte] lista das mensagens enviadas com a situação e as respostas da equipe */}
+        {onOpenTickets ? (
+          <MenuOption title="Meus chamados" subtitle="Acompanhe suas mensagens e as respostas" symbol="help" onPress={onOpenTickets} />
         ) : null}
       </View>
 

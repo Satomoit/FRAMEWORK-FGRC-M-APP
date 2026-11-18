@@ -1,7 +1,7 @@
 // ReactNode deixa a pagina receber outros componentes dentro dela
 import type { ReactNode } from 'react';
 // esses componentes montam botões textos campos e rolagem (tudo no React Native)
-import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { useFgrcTheme } from '@/components/fgrc-colors';
 
 // define o que uma pagina pode receber (titulo subtitulo botão de voltar e conteúdo)
@@ -18,7 +18,10 @@ export function Page({ title, subtitle, onBack, children }: PageProps) {
   // usa a largura pra ajustar a margem em telas pequenas
   const { width } = useWindowDimensions();
   // a pagina tem rolagem pra vc conseguir ver tudo até no celular
+  // [correção Android] o KeyboardAvoidingView encolhe a página quando o teclado abre
+  // (sem ele, no Android o teclado ficava por cima dos campos do fim da tela, ex: a mensagem do suporte)
   return (
+    <KeyboardAvoidingView style={styles.teclado} behavior={Platform.OS === 'web' ? undefined : 'padding'}>
     <ScrollView
       style={[styles.scroll, { backgroundColor: colors.background }]}
       contentContainerStyle={[styles.scrollContent, { paddingHorizontal: width < 400 ? 18 : 28 }]}
@@ -50,6 +53,7 @@ export function Page({ title, subtitle, onBack, children }: PageProps) {
         {children}
       </View>
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -217,6 +221,8 @@ export function MenuOption({ title, subtitle, symbol, onPress }: {
 // estilos compartilhados (se vc mudar aqui pode afetar as quatro telas)
 const styles = StyleSheet.create({
   scroll: { flex: 1 },
+  // [correção Android] ocupa a tela toda, igual o ScrollView ocupava antes
+  teclado: { flex: 1 },
   // coloca respiro no começo e no fim (principalmente no celular)
   scrollContent: { flexGrow: 1, paddingTop: 23, paddingBottom: Platform.OS === 'web' ? 42 : 112 },
   // limita o conteúdo a uma largura boa de leitura no pc

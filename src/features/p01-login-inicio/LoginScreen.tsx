@@ -1,5 +1,5 @@
-import { useRouter, type Href } from 'expo-router';
-import { useRef, useState, type ComponentRef } from 'react';
+import { useRouter } from 'expo-router';
+import { useRef, useState, type ComponentRef, useMemo } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -15,9 +15,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useCorDoTema, type CorDoTema } from '@/components/cor-do-tema';
+import { contaLiberada } from '@/lib/conta';
 import { supabase } from '@/lib/supabase';
 
 export default function LoginScreen() {
+  // [tema] cores que seguem o tema escolhido (Configurações ou Opções da página inicial)
+  const { cor } = useCorDoTema();
+  const styles = useMemo(() => criarEstilos(cor), [cor]);
   // [integração] usado pelos links Esqueci minha senha e Solicitar acesso
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -27,6 +32,12 @@ export default function LoginScreen() {
 
   const senhaRef = useRef<ComponentRef<typeof TextInput>>(null);
   const enviandoRef = useRef(false);
+
+  // [entrada nova] volta pra página inicial (se veio de lá, só volta; se abriu o /entrar direto, troca pela "/")
+  function voltarInicio() {
+    if (router.canGoBack()) router.back();
+    else router.replace('/');
+  }
 
   async function entrar() {
     if (enviandoRef.current) return;
@@ -78,8 +89,18 @@ export default function LoginScreen() {
         return;
       }
 
+      // [segurança] conta que não passou pela aprovação da equipe não entra
+      // (sai na hora e explica o que fazer, em vez de deixar a pessoa presa no login sem motivo)
+      if (!contaLiberada(data.session.user)) {
+        await supabase.auth.signOut();
+        setSenha('');
+        setMensagem('Esta conta ainda não foi liberada pela equipe do FGRC-M. Solicite acesso ou acompanhe o seu pedido.');
+        return;
+      }
+
       setSenha('');
       // A rota index.tsx detecta a sessão e abre a página inicial.
+      // [entrada nova] agora quem detecta é a rota /entrar (SoSemLogin), que leva pra /inicio
     } catch {
       setMensagem(
         'Não foi possível conectar. Verifique sua internet e tente novamente.'
@@ -101,6 +122,20 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.content}>
+            {/* [entrada nova] o Login agora abre a partir da página inicial (Conheça o FGRC-M)
+                esse botão volta pra ela; o voltar do Android faz a mesma coisa */}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Voltar para a página inicial"
+              hitSlop={12}
+              disabled={carregando}
+              onPress={voltarInicio}
+              style={({ pressed }) => [styles.voltar, pressed && styles.pressed]}
+            >
+              <Text style={styles.voltarIcone}>←</Text>
+              <Text style={styles.voltarTexto}>Página inicial</Text>
+            </Pressable>
+
             <View style={styles.header}>
               <Image
                 source={require('../../../assets/images/logo-fgrcm.png')}
@@ -115,6 +150,7 @@ export default function LoginScreen() {
               <Text style={styles.subtitle}>
                 Gestão de riscos cibernéticos municipais
               </Text>
+
             </View>
 
             <View style={styles.welcome}>
@@ -132,7 +168,7 @@ export default function LoginScreen() {
                 accessibilityLabel="E-mail institucional"
                 style={styles.input}
                 placeholder="Digite seu e-mail..."
-                placeholderTextColor="#52647C"
+                placeholderTextColor={cor('#52647C', 'muted')}
                 value={email}
                 onChangeText={(value) => {
                   setEmail(value);
@@ -156,7 +192,7 @@ export default function LoginScreen() {
                 accessibilityLabel="Senha"
                 style={styles.input}
                 placeholder="Digite sua senha..."
-                placeholderTextColor="#52647C"
+                placeholderTextColor={cor('#52647C', 'muted')}
                 value={senha}
                 onChangeText={(value) => {
                   setSenha(value);
@@ -206,7 +242,7 @@ export default function LoginScreen() {
             >
               {carregando ? (
                 <View style={styles.loadingRow}>
-                  <ActivityIndicator color="#FFFFFF" />
+                  <ActivityIndicator color={cor('#FFFFFF', 'sobreAzul')} />
                   <Text style={styles.loginButtonText}>Entrando...</Text>
                 </View>
               ) : (
@@ -214,74 +250,8 @@ export default function LoginScreen() {
               )}
             </Pressable>
 
-            <View style={styles.registerRow}>
-              <Text style={styles.registerText}>
-                Ainda não tem acesso?
-              </Text>
-
-              <Pressable
-                accessibilityRole="button"
-                style={styles.registerButton}
-                disabled={carregando}
-                // [integração P02] abre o formulário de pedido de acesso da Liz
-                onPress={() => router.push('/solicitar-acesso')}
-              >
-                <Text style={styles.link}>Solicitar acesso</Text>
-              </Pressable>
-            </View>
-
-            {/* [integração] depois que a administração aprova, a pessoa ativa o acesso com o código do e-mail */}
-            <View style={styles.registerRow}>
-              <Text style={styles.registerText}>Seu pedido foi aprovado?</Text>
-              <Pressable
-                accessibilityRole="button"
-                style={styles.registerButton}
-                disabled={carregando}
-                onPress={() => router.push('/ativar-acesso' as Href)}
-              >
-                <Text style={styles.link}>Ativar acesso</Text>
-              </Pressable>
-            </View>
-
-            {/* [integração] "Status da solicitação" do Mapeamento: consulta se o pedido já foi analisado */}
-            <View style={styles.registerRow}>
-              <Text style={styles.registerText}>Já fez o pedido?</Text>
-              <Pressable
-                accessibilityRole="button"
-                style={styles.registerButton}
-                disabled={carregando}
-                onPress={() => router.push('/situacao-pedido' as Href)}
-              >
-                <Text style={styles.link}>Ver situação</Text>
-              </Pressable>
-            </View>
-
-            {/* [integração] quem não consegue entrar também precisa de um jeito de pedir ajuda */}
-            <View style={styles.registerRow}>
-              <Text style={styles.registerText}>Precisa de ajuda?</Text>
-              <Pressable
-                accessibilityRole="button"
-                style={styles.registerButton}
-                disabled={carregando}
-                onPress={() => router.push('/suporte' as Href)}
-              >
-                <Text style={styles.link}>Falar com o suporte</Text>
-              </Pressable>
-            </View>
-
-            {/* [integração] links pequenos no pé da tela: privacidade (dá pra ler antes de pedir acesso)
-                e a entrada da área administrativa, que não fica em nenhum menu do app
-                (no celular não tem barra de endereço pra digitar /admin, por isso o link existe)
-                se o grupo preferir esconder, é só apagar o Pressable da Área da administração */}
-            <View style={styles.registerRow}>
-              <Pressable accessibilityRole="link" hitSlop={8} onPress={() => router.push('/privacidade' as Href)}>
-                <Text style={styles.registerText}>Privacidade e termos</Text>
-              </Pressable>
-              <Text style={styles.registerText}>  ·  </Text>
-              <Pressable accessibilityRole="link" hitSlop={8} onPress={() => router.push('/admin' as Href)}>
-                <Text style={styles.registerText}>Área da administração</Text>
-              </Pressable>
-            </View>
+            {/* [entrada nova] pedir acesso, acompanhar, ativar, suporte, privacidade e administração
+                saíram daqui: agora ficam na página inicial (Conheça o FGRC-M), pra o Login ficar só com o essencial */}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -289,13 +259,16 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+// [tema] os estilos viraram uma função pra as cores seguirem o tema (claro, escuro e alto contraste)
+// tamanhos e espaçamentos não mudaram, e no tema claro as cores continuam as originais
+function criarEstilos(cor: CorDoTema) {
+  return StyleSheet.create({
   flex: {
     flex: 1,
   },
   safeArea: {
     flex: 1,
-    backgroundColor: '#F5F8FC',
+    backgroundColor: cor('#F5F8FC', 'background'),
   },
   scrollContent: {
     flexGrow: 1,
@@ -318,12 +291,12 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   brand: {
-    color: '#17263E',
+    color: cor('#17263E', 'text'),
     fontSize: 30,
     fontWeight: '700',
   },
   subtitle: {
-    color: '#465B76',
+    color: cor('#465B76', 'muted'),
     fontSize: 14,
     textAlign: 'center',
     marginTop: 4,
@@ -333,13 +306,13 @@ const styles = StyleSheet.create({
     marginBottom: 36,
   },
   title: {
-    color: '#17263E',
+    color: cor('#17263E', 'text'),
     fontSize: 27,
     fontWeight: '600',
     marginBottom: 4,
   },
   description: {
-    color: '#465B76',
+    color: cor('#465B76', 'muted'),
     fontSize: 14,
     lineHeight: 21,
   },
@@ -347,19 +320,19 @@ const styles = StyleSheet.create({
     marginBottom: 22,
   },
   label: {
-    color: '#17263E',
+    color: cor('#17263E', 'text'),
     fontSize: 15,
     marginBottom: 7,
   },
   input: {
     minHeight: 56,
     borderWidth: 1,
-    borderColor: '#52647C',
+    borderColor: cor('#52647C', 'border'),
     borderRadius: 13,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: cor('#FFFFFF', 'input'),
     paddingHorizontal: 16,
     paddingVertical: 14,
-    color: '#17263E',
+    color: cor('#17263E', 'text'),
     fontSize: 14,
   },
   forgotButton: {
@@ -370,13 +343,13 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   link: {
-    color: '#465B76',
+    color: cor('#465B76', 'muted'),
     fontSize: 14,
     fontWeight: '600',
   },
   message: {
-    color: '#17263E',
-    backgroundColor: '#E6EDF5',
+    color: cor('#17263E', 'text'),
+    backgroundColor: cor('#E6EDF5', 'infoBackground'),
     padding: 12,
     borderRadius: 8,
     marginBottom: 16,
@@ -384,7 +357,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   loginButton: {
-    backgroundColor: '#11558B',
+    backgroundColor: cor('#11558B', 'blue'),
     minHeight: 56,
     borderRadius: 13,
     alignItems: 'center',
@@ -399,7 +372,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   loginButtonText: {
-    color: '#FFFFFF',
+    color: cor('#FFFFFF', 'sobreAzul'),
     fontSize: 17,
     fontWeight: '600',
   },
@@ -412,11 +385,31 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   registerText: {
-    color: '#17263E',
+    color: cor('#17263E', 'text'),
     fontSize: 14,
   },
   registerButton: {
     minHeight: 44,
     justifyContent: 'center',
   },
+  // [entrada nova] botão "Página inicial" do topo (mesmo jeito do Voltar das outras telas)
+  voltar: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    minHeight: 44,
+    paddingRight: 16,
+    marginBottom: 12,
+  },
+  voltarIcone: {
+    fontSize: 22,
+    color: cor('#17263E', 'text'),
+  },
+  voltarTexto: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: cor('#465B76', 'muted'),
+  },
 });
+}

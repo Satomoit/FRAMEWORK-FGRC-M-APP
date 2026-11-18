@@ -144,6 +144,116 @@ export async function mudarStatusMensagem(id: string, status: StatusSuporte): Pr
   if (error || !data?.length) throw new Error('Não foi possível atualizar a mensagem.');
 }
 
+// ---------- respostas do suporte (aparecem pra pessoa em Meus chamados) ----------
+
+export type RespostaSuporte = { id: string; texto: string; autor_email: string | null; criado_em: string };
+
+export async function listarRespostas(chamadoId: string): Promise<RespostaSuporte[]> {
+  const { data, error } = await supabase
+    .from('support_replies')
+    .select('id, texto, autor_email, criado_em')
+    .eq('chamado_id', chamadoId)
+    .order('criado_em', { ascending: true });
+  if (error) throw new Error('Não foi possível carregar as respostas.');
+  return (data ?? []) as RespostaSuporte[];
+}
+
+// o app manda só o chamado e o texto; quem respondeu e o horário o banco grava sozinho (gatilho)
+// o banco também passa o chamado de "aberto" pra "em atendimento" e grava no histórico
+export async function responderChamado(chamadoId: string, texto: string): Promise<void> {
+  const limpo = texto.trim();
+  if (limpo.length < 2) throw new Error('Escreva a resposta antes de enviar.');
+  if (limpo.length > 2000) throw new Error('A resposta pode ter no máximo 2000 caracteres.');
+  const { error } = await supabase.from('support_replies').insert({ chamado_id: chamadoId, texto: limpo });
+  if (error) {
+    throw new Error(error.code === '42501'
+      ? 'Sem permissão para responder. Entre de novo na área administrativa.'
+      : 'Não foi possível enviar a resposta. Tente de novo.');
+  }
+}
+
+// ---------- status do sistema: manutenção e versões ----------
+
+export type Plataformas = 'todas' | 'web' | 'android';
+
+export type StatusDoSistema = {
+  manutencao_ativa: boolean;
+  mensagem: string | null;
+  previsao_retorno: string | null;
+  plataformas: Plataformas;
+  atualizado_em: string | null;
+  atualizado_por_email: string | null;
+};
+
+export type VersaoDoApp = {
+  plataforma: 'android' | 'web' | 'ios';
+  versao_atual: string;
+  versao_minima: string;
+  obrigatoria: boolean;
+  url_atualizacao: string | null;
+  mensagem: string | null;
+  notas: string | null;
+  publicada_em: string | null;
+  atualizado_em: string | null;
+  atualizado_por_email: string | null;
+};
+
+export async function lerStatusDoSistema(): Promise<StatusDoSistema> {
+  const { data, error } = await supabase
+    .from('sistema_status')
+    .select('manutencao_ativa, mensagem, previsao_retorno, plataformas, atualizado_em, atualizado_por_email')
+    .eq('id', 1)
+    .maybeSingle();
+  if (error || !data) throw new Error('Não foi possível ler o status do sistema.');
+  return data as StatusDoSistema;
+}
+
+// liga/desliga a manutenção; quem mudou e quando o banco grava sozinho (gatilho + histórico)
+export async function salvarStatusDoSistema(dados: Pick<StatusDoSistema, 'manutencao_ativa' | 'mensagem' | 'previsao_retorno' | 'plataformas'>): Promise<void> {
+  const { data, error } = await supabase.from('sistema_status').update(dados).eq('id', 1).select('id');
+  if (error || !data?.length) throw new Error('Não foi possível salvar. Confira os campos e tente de novo.');
+}
+
+export async function listarVersoes(): Promise<VersaoDoApp[]> {
+  const { data, error } = await supabase
+    .from('app_versoes')
+    .select('plataforma, versao_atual, versao_minima, obrigatoria, url_atualizacao, mensagem, notas, publicada_em, atualizado_em, atualizado_por_email')
+    .order('plataforma');
+  if (error) throw new Error('Não foi possível ler as versões.');
+  return (data ?? []) as VersaoDoApp[];
+}
+
+export async function salvarVersao(
+  plataforma: VersaoDoApp['plataforma'],
+  dados: Pick<VersaoDoApp, 'versao_atual' | 'versao_minima' | 'obrigatoria' | 'url_atualizacao' | 'mensagem' | 'notas' | 'publicada_em'>,
+): Promise<void> {
+  const { data, error } = await supabase.from('app_versoes').update(dados).eq('plataforma', plataforma).select('plataforma');
+  if (error) {
+    // as regras do banco devolvem o nome da trava que falhou
+    const t = `${error.message ?? ''}`;
+    throw new Error(t.includes('minima_ate_atual')
+      ? 'A versão mínima não pode ser maior que a versão atual.'
+      : t.includes('url_atualizacao')
+        ? 'O link precisa começar com https://'
+        : t.includes('versao_')
+          ? 'Use o formato 1.2.3 nas versões.'
+          : 'Não foi possível salvar a versão.');
+  }
+  if (!data?.length) throw new Error('Sem permissão para mudar a versão.');
+}
+
+// últimas mudanças de manutenção e versão (quem fez e quando)
+export async function historicoDoSistema(): Promise<RegistroHistorico[]> {
+  const { data, error } = await supabase
+    .from('admin_audit_logs')
+    .select('id, criado_em, admin_email, acao, de, para')
+    .in('tabela', ['sistema_status', 'app_versoes'])
+    .order('criado_em', { ascending: false })
+    .limit(15);
+  if (error) throw new Error('Não foi possível carregar o histórico.');
+  return (data ?? []) as RegistroHistorico[];
+}
+
 // ---------- histórico (auditoria) ----------
 
 export async function historicoDoRegistro(registroId: string): Promise<RegistroHistorico[]> {

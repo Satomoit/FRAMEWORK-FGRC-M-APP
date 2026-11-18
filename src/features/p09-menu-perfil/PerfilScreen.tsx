@@ -197,9 +197,10 @@ export default function PerfilScreen({ profile, onSaveProfile, onBack, onChangeP
     setMode('view');
   }
 
+  // [integração] o subtítulo do modo editar não fala mais em "demonstração" pq agora o perfil salva de verdade (rota /mais)
   return (
     <Page title={mode === 'view' ? 'Meu perfil' : mode === 'edit' ? 'Editar perfil' : 'Alterar senha'} onBack={back}
-      subtitle={mode === 'edit' ? 'Atualize seus dados nesta demonstração.' : mode === 'password' ? 'Confira os campos para simular a troca de senha.' : undefined}>
+      subtitle={mode === 'edit' ? 'Atualize seu nome e seu e-mail.' : mode === 'password' ? 'Confira os campos para simular a troca de senha.' : undefined}>
       {/* se ta no modo view mostra o resumo e os dados do perfil */}
       {mode === 'view' ? (
         <>
@@ -227,7 +228,7 @@ export default function PerfilScreen({ profile, onSaveProfile, onBack, onChangeP
         <View style={styles.form}>
           {/* cada campo mexe só no rascunho (salva tudo no botão Salvar) */}
           <FormField label="Nome completo" value={draft.name} onChangeText={v => { setDraft(p => ({ ...p, name: v })); setError(''); }} />
-          <FormField label="E-mail institucional" email value={draft.email} hint="No sistema definitivo, alterações de e-mail estarão sujeitas à aprovação." onChangeText={v => { setDraft(p => ({ ...p, email: v })); setError(''); }} />
+          <FormField label="E-mail institucional" email value={draft.email} hint="Ao trocar o e-mail, enviamos um link de confirmação. A troca só vale depois de confirmar." onChangeText={v => { setDraft(p => ({ ...p, email: v })); setError(''); }} />
           {/* [integração B1c] prefeitura, município e estado vêm do cadastro aprovado */}
           {/* então aparecem só pra leitura (quem muda isso é a administração, não o usuário) */}
           <View style={styles.details}>

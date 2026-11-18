@@ -1,7 +1,11 @@
 // Geração e exportação do relatório em PDF.
 // Dependências: npx expo install expo-print expo-sharing
+// [correção Android] + expo-file-system (já vem com o Expo; agora ta declarado no package.json)
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Directory, File, Paths } from 'expo-file-system';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import { Platform } from 'react-native';
 import { Recommendation, Report } from './types';
 // [integração] nota máxima, referência, data/hora e explicação do cálculo (mesmas do PDF da web)
 import {
@@ -11,6 +15,8 @@ import {
   textoReferencia,
   valorMaximoDa,
 } from '@/lib/calcular-relatorio';
+// [correção Android] nome padrão do arquivo: FGRC-M_Avaliacao_2026-11-18_AB12CD.pdf
+import { nomeDoArquivoPdf } from '@/lib/nome-do-pdf';
 
 const escape = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -118,16 +124,106 @@ export function buildHtml(report: Report, recs: Recommendation[]): string {
   </body></html>`;
 }
 
-export async function generateReportPdf(report: Report, recs: Recommendation[]) {
+// [correção Android] o que cada botão devolve pra tela mostrar um aviso
+// ok = deu certo | mensagem = texto pro aviso (vazio = não precisa avisar nada)
+export type ResultadoPdf = { ok: boolean; mensagem: string; nomeArquivo: string };
+
+const TIPO_PDF = 'application/pdf';
+// última pasta que a pessoa escolheu pra salvar (a janela de escolher pasta já abre nela da próxima vez)
+const CHAVE_ULTIMA_PASTA = 'fgrcm:pdf:ultima-pasta';
+
+// [correção Android] gera o PDF e deixa ele com o nome certo numa pasta interna do app (cache)
+// antes o arquivo ficava com o nome aleatório do expo-print (ex: 3f2a9c...pdf) e era isso que ia pro WhatsApp
+// essa cópia interna só o app enxerga; quem coloca o PDF num lugar que vc acha é o Baixar (lá embaixo)
+async function prepararArquivo(report: Report, recs: Recommendation[]): Promise<File> {
   // não exportamos uma lista vazia ou um resultado de exemplo no lugar de uma avaliação real
   if (!report.answers?.length) throw new Error('Não há respostas registradas para gerar o PDF');
   const { uri } = await Print.printToFileAsync({ html: buildHtml(report, recs) });
-  if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(uri, {
-      mimeType: 'application/pdf',
-      dialogTitle: `Relatório ${report.date}`,
-      UTI: 'com.adobe.pdf',
-    });
+  const pasta = new Directory(Paths.cache, 'relatorios-fgrcm');
+  pasta.create({ intermediates: true, idempotent: true });
+  const arquivo = new File(uri);
+  // o move muda o "endereço" (uri) do próprio arquivo pro novo lugar, já com o nome novo
+  await arquivo.move(new File(pasta, nomeDoArquivoPdf(report.id, report.finalizedAt)), { overwrite: true });
+  return arquivo;
+}
+
+// BAIXAR: grava uma cópia do PDF numa pasta que vc escolhe (Downloads, Documentos, Drive...)
+// no Android quem mostra a lista de pastas é o próprio sistema (não precisa de permissão extra)
+// obs: a partir do Android 11 o sistema não deixa usar a raiz da pasta Download direto,
+// então a pessoa escolhe (ou cria) uma pasta dentro dela, por exemplo Download/FGRC-M
+// no iPhone não existe "pasta Downloads": lá a gente abre o compartilhar, que tem "Salvar em Arquivos"
+export async function baixarRelatorioPdf(report: Report, recs: Recommendation[]): Promise<ResultadoPdf> {
+  const arquivo = await prepararArquivo(report, recs);
+  const nome = arquivo.name;
+  if (Platform.OS !== 'android') {
+    return compartilharArquivo(arquivo, 'Salvar o PDF');
   }
-  return uri;
+
+  let pasta: Directory;
+  try {
+    const ultima = await AsyncStorage.getItem(CHAVE_ULTIMA_PASTA).catch(() => null);
+    pasta = await Directory.pickDirectoryAsync(ultima ?? undefined);
+  } catch {
+    // fechou a janela sem escolher (ou o celular não tem o seletor de pastas)
+    return { ok: false, mensagem: 'Nenhuma pasta foi escolhida, então o PDF não foi salvo. Toque em Baixar PDF de novo e escolha uma pasta.', nomeArquivo: nome };
+  }
+  await AsyncStorage.setItem(CHAVE_ULTIMA_PASTA, pasta.uri).catch(() => {});
+
+  // createFile pede pro sistema criar o arquivo na pasta escolhida
+  // se já existir um com o mesmo nome, o Android cria outro com (1) no final em vez de apagar o antigo
+  const copia = pasta.createFile(nome, TIPO_PDF);
+  await copia.write(await arquivo.bytes());
+  const nomeFinal = textoLegivel(copia.uri).split('/').pop() || nome;
+  return {
+    ok: true,
+    mensagem: `PDF salvo em "${textoLegivel(pasta.uri)}" com o nome ${nomeFinal}.`,
+    nomeArquivo: nomeFinal,
+  };
+}
+
+// o Android devolve endereços tipo content://...tree/primary%3ADownload%2FFGRC-M
+// isso aqui transforma em "Download/FGRC-M" pra mostrar no aviso
+function textoLegivel(uri: string): string {
+  let texto = uri;
+  try { texto = decodeURIComponent(uri); } catch { /* fica como veio */ }
+  const depoisDosDoisPontos = texto.split(':').pop() ?? texto;
+  return depoisDosDoisPontos.replace(/^\/+/, '') || 'pasta escolhida';
+}
+
+// ABRIR: abre o PDF num leitor do celular (Google Drive, leitor de PDF do aparelho etc)
+// o próprio expo-file-system passa o arquivo pro app leitor de um jeito seguro (sem link público)
+export async function abrirRelatorioPdf(report: Report, recs: Recommendation[]): Promise<ResultadoPdf> {
+  const arquivo = await prepararArquivo(report, recs);
+  const nome = arquivo.name;
+  if (await arquivo.canPreview({ mimeType: TIPO_PDF })) {
+    await arquivo.preview({ mimeType: TIPO_PDF, title: nome });
+    return { ok: true, mensagem: '', nomeArquivo: nome };
+  }
+  return {
+    ok: false,
+    mensagem: 'Não encontramos um app para abrir PDF neste celular. Instale um leitor de PDF (ou o Google Drive) ou use Compartilhar.',
+    nomeArquivo: nome,
+  };
+}
+
+// COMPARTILHAR: manda o ARQUIVO PDF (não um texto) pra WhatsApp, e-mail, Drive...
+// antes o botão Compartilhar mandava só uma frase de resumo, por isso "não funcionava como esperado"
+export async function compartilharRelatorioPdf(report: Report, recs: Recommendation[]): Promise<ResultadoPdf> {
+  const arquivo = await prepararArquivo(report, recs);
+  return compartilharArquivo(arquivo, 'Compartilhar o relatório');
+}
+
+async function compartilharArquivo(arquivo: File, titulo: string): Promise<ResultadoPdf> {
+  const nome = arquivo.name;
+  if (!(await Sharing.isAvailableAsync())) {
+    return { ok: false, mensagem: 'Este aparelho não permite compartilhar arquivos pelo app.', nomeArquivo: nome };
+  }
+  await Sharing.shareAsync(arquivo.uri, { mimeType: TIPO_PDF, dialogTitle: titulo, UTI: 'com.adobe.pdf' });
+  return { ok: true, mensagem: '', nomeArquivo: nome };
+}
+
+// [integração] nome antigo continua existindo pra quem já chamava ele (tela de Recomendações e index.ts)
+// agora ele faz o mesmo que o Baixar PDF
+export async function generateReportPdf(report: Report, recs: Recommendation[]): Promise<ResultadoPdf> {
+  return baixarRelatorioPdf(report, recs);
 }

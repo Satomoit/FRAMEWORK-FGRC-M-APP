@@ -11,6 +11,8 @@ import MenuMaisScreen from '@/features/p09-menu-perfil/MenuMaisScreen';
 import PerfilScreen, { type ProfileData } from '@/features/p09-menu-perfil/PerfilScreen';
 import { SEM_DADO, dadosDaConta } from '@/lib/conta';
 import { problemaNoEmailInstitucional } from '@/lib/email-institucional';
+import { plataformaDoApp, versaoInstalada } from '@/lib/sistema';
+import { NOME_DA_VERSAO } from '@/lib/versao';
 import { supabase } from '@/lib/supabase';
 
 // monta o perfil que a P09 espera a partir do usuário logado
@@ -52,7 +54,8 @@ async function salvarPerfilNoSupabase(anterior: ProfileData, novo: ProfileData):
     throw new Error('Não foi possível salvar. Verifique a internet e tente de novo.');
   }
   return mudouEmail
-    ? 'Dados salvos. Para trocar o e-mail, abra o link de confirmação que enviamos para o e-mail novo.'
+    // a troca segura do Supabase manda link pro e-mail novo e às vezes pro atual também
+    ? 'Dados salvos. Para trocar o e-mail, abra o link de confirmação que enviamos para o e-mail novo (se chegar um link no e-mail atual, confirme nele também).'
     : 'Dados salvos.';
 }
 
@@ -144,9 +147,17 @@ export default function Mais() {
         onOpenPrivacy={() => router.push('/privacidade' as Href)}
         // [integração] Ajuda e suporte abre o formulário de contato (grava o pedido no Supabase)
         onOpenSupport={() => router.push('/suporte' as Href)}
+        // [suporte] acompanhar as mensagens enviadas e as respostas da equipe
+        onOpenTickets={() => router.push('/meus-chamados' as Href)}
         // [integração] a Administração saiu daqui de propósito: agora é uma área separada (rota /admin)
         onSignOut={sair}
       />
+      {/* [nova versão] mostra qual versão ta instalada (ajuda a preencher o registro de testes e o suporte) */}
+      <Text style={[styles.versao, { color: colors.muted }]}>
+        {/* [entrega] mostra o nome da versão de entrega e, entre parênteses, o número técnico do build
+            (o técnico ajuda a preencher o registro de testes e a conferir a atualização) */}
+        FGRC-M Versão {NOME_DA_VERSAO} ({versaoInstalada() ?? 'desconhecida'} · {plataformaDoApp() === 'web' ? 'navegador' : plataformaDoApp()})
+      </Text>
     </View>
   );
 }
@@ -155,4 +166,5 @@ const styles = StyleSheet.create({
   raiz: { flex: 1 },
   centro: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   erro: { fontSize: 14, padding: 12, textAlign: 'center' },
+  versao: { fontSize: 12, textAlign: 'center', paddingVertical: 6 },
 });

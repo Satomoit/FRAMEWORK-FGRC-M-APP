@@ -20,12 +20,14 @@ import { formatoDeEmailValido } from '@/lib/email-institucional';
 import { supabase } from '@/lib/supabase';
 import AbaContas from './AbaContas';
 import AbaSeguranca from './AbaSeguranca';
+// [manutenção e atualização] aba nova: liga/desliga manutenção e cadastra a versão mínima
+import AbaSistema from './AbaSistema';
 import AbaSolicitacoes from './AbaSolicitacoes';
 import AbaSuporte from './AbaSuporte';
 import { Filtros } from './ui-admin';
 
 type Estado = 'carregando' | 'sem_sessao' | 'nao_admin' | 'precisa_mfa' | 'ok' | 'erro';
-type Aba = 'solicitacoes' | 'suporte' | 'contas' | 'seguranca';
+type Aba = 'solicitacoes' | 'suporte' | 'contas' | 'sistema' | 'seguranca';
 
 export default function AreaAdministrativa() {
   const router = useRouter();
@@ -109,6 +111,7 @@ export default function AreaAdministrativa() {
           { valor: 'solicitacoes', rotulo: 'Solicitações de acesso' },
           { valor: 'suporte', rotulo: 'Mensagens de suporte' },
           { valor: 'contas', rotulo: 'Contas' },
+          { valor: 'sistema', rotulo: 'Status do sistema' },
           { valor: 'seguranca', rotulo: 'Segurança' },
         ]}
       />
@@ -116,6 +119,7 @@ export default function AreaAdministrativa() {
       {aba === 'solicitacoes' ? <AbaSolicitacoes /> : null}
       {aba === 'suporte' ? <AbaSuporte /> : null}
       {aba === 'contas' ? <AbaContas /> : null}
+      {aba === 'sistema' ? <AbaSistema /> : null}
       {aba === 'seguranca' ? <AbaSeguranca /> : null}
       <View style={[styles.divisor, { backgroundColor: colors.divider }]} />
       <FgrcButton label="Sair da área administrativa" variant="outlined" onPress={() => { void sair(); }} />

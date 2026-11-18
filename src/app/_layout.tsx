@@ -12,10 +12,13 @@ import { ActivityIndicator, View } from "react-native";
 
 import { AnimatedSplashOverlay } from "@/components/animated-icon";
 import AppNavigation from "@/components/app-navigation";
+// [manutenção e atualização] confere manutenção e versão mínima antes de mostrar as telas
+import { GuardaDoSistema } from "@/components/guarda-do-sistema";
 import {
   PreferenciasProvider,
   usePreferencias,
 } from "@/features/p11-configuracoes/PreferenciasProvider";
+import { contaLiberada } from "@/lib/conta";
 import { supabase } from "@/lib/supabase";
 
 SplashScreen.preventAutoHideAsync();
@@ -60,7 +63,9 @@ function RaizDoApp() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_evento, session) => {
-      setLogado(Boolean(session));
+      // [segurança] só conta como logada se a conta tiver sido liberada pela equipe
+      // (conta criada por fora da aprovação fica no login, sem abrir as telas protegidas)
+      setLogado(session ? contaLiberada(session.user) : false);
     });
 
     return () => subscription.unsubscribe();
@@ -92,6 +97,9 @@ function RaizDoApp() {
         </View>
       ) : (
         // [integração B1] a barra fica por fora do Stack pra não sumir quando troca de tela
+        // [manutenção e atualização] a guarda fica por fora de tudo: se a versão for velha demais
+        // ou a administração ligar a manutenção, ela cobre as telas (sem desmontar nada)
+        <GuardaDoSistema>
         <AppNavigation logado={logado}>
           <Stack
             screenOptions={{
@@ -104,6 +112,7 @@ function RaizDoApp() {
             {/* [integração B1] essas rotas só abrem com login (guard)
                 sem sessão, ou digitando a URL sem login, o Expo Router manda pro "/"
                 públicas (fora daqui): index (login), solicitar-acesso, explore,
+                [entrada nova] index agora é a página Conheça o FGRC-M e o login foi pra /entrar
                 criar-nova-senha e senha-alterada
                 rota nova em src/app precisa entrar aqui ou na lista de públicas do app-navigation
                 (se esquecer, a rede de segurança de lá bloqueia sem login do mesmo jeito) */}
@@ -121,9 +130,12 @@ function RaizDoApp() {
               {/* [integração P11] telas 22 (configurações) e 20 (alterar senha) da Nicole */}
               <Stack.Screen name="configuracoes" />
               <Stack.Screen name="alterar-senha" />
+              {/* [suporte] lista dos chamados da própria pessoa, com as respostas da equipe */}
+              <Stack.Screen name="meus-chamados" />
             </Stack.Protected>
           </Stack>
         </AppNavigation>
+        </GuardaDoSistema>
       )}
     </ThemeProvider>
   );

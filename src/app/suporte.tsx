@@ -2,7 +2,7 @@
 // abre pelo Login (Falar com o suporte) e pelo Mais (Ajuda e suporte)
 // grava o pedido na tabela support_requests do Supabase (o app só consegue ENVIAR, não ler)
 // a equipe lê os pedidos no painel: Table Editor > support_requests
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -34,6 +34,8 @@ export default function Suporte() {
   const [erro, setErro] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(false);
+  // [suporte] com login a mensagem fica ligada à conta e dá pra acompanhar em Meus chamados
+  const [logado, setLogado] = useState(false);
 
   // se a pessoa ta logada, já preenche nome e e-mail (ela ainda pode mudar)
   // getSession lê a sessão salva no aparelho (não precisa de internet)
@@ -42,6 +44,7 @@ export default function Suporte() {
     supabase.auth.getSession().then(({ data }) => {
       const user = data.session?.user;
       if (!ativo || !user) return;
+      setLogado(true);
       const d = dadosDaConta(user);
       setNome(atual => atual || d.nome || '');
       setEmail(atual => atual || d.email || '');
@@ -111,9 +114,17 @@ export default function Suporte() {
 
   if (enviado) {
     return (
-      <Page title="Mensagem enviada" subtitle="A equipe do FGRC-M vai responder pelo e-mail informado." onBack={voltar}>
+      <Page
+        title="Mensagem enviada"
+        subtitle={logado
+          ? 'A equipe do FGRC-M vai responder em Meus chamados (no menu Mais) e, se precisar, pelo e-mail informado.'
+          : 'A equipe do FGRC-M vai responder pelo e-mail informado.'}
+        onBack={voltar}
+      >
         <View style={styles.bloco}>
-          <FgrcButton label="Voltar" onPress={voltar} />
+          {/* [suporte] com login dá pra acompanhar a situação e ler a resposta dentro do app */}
+          {logado ? <FgrcButton label="Acompanhar em Meus chamados" onPress={() => router.replace('/meus-chamados' as Href)} /> : null}
+          <FgrcButton label="Voltar" variant={logado ? 'outlined' : 'filled'} onPress={voltar} />
           <OrangeLink label="Enviar outra mensagem" onPress={() => setEnviado(false)} />
         </View>
       </Page>
@@ -123,6 +134,8 @@ export default function Suporte() {
   return (
     <Page title="Ajuda e suporte" subtitle="Conte o que aconteceu. A equipe do FGRC-M vai responder pelo seu e-mail." onBack={voltar}>
       <View style={styles.bloco}>
+        {/* [suporte] atalho pra ver as mensagens que já mandou e as respostas */}
+        {logado ? <OrangeLink label="Ver meus chamados" onPress={() => router.push('/meus-chamados' as Href)} /> : null}
         <FormField label="Nome completo" value={nome} onChangeText={setNome} placeholder="Digite seu nome..." />
         <FormField label="E-mail para resposta" email value={email} onChangeText={setEmail} placeholder="Digite seu e-mail..." />
 
