@@ -116,6 +116,14 @@ Só a administração lê. Ninguém escreve direto: as linhas são criadas pelos
 
 Detalhes de funcionamento: `docs/manutencao-atualizacao-suporte-pdf.md`.
 
+### 4.4.2 Tabela de 19/11/2026 (aplicada no Supabase em 19/11)
+
+| Tabela | Colunas principais | Quem lê | Quem escreve |
+|---|---|---|---|
+| `email_notificacoes` | `evento` (`pedido_recebido`, `pedido_aprovado`), `pedido_id` (apaga junto com o pedido), `destinatario`, `status` (`enviando`, `enviado`, `falhou`, `nao_configurado`), `tentativas`, `provedor`, `id_no_provedor`, `erro` (até 200 caracteres), datas. Uma linha por evento e pedido | Só a administração (RLS com `e_admin_fgrcm`) | Só o servidor, pelas funções `fgrcm_reservar_notificacao` e `fgrcm_concluir_notificacao` |
+
+Detalhes: `docs/configurar-email-gmail-supabase.md` (Parte 7) e `docs/melhorias-19-11-2026.md`.
+
 ### 4.5 Funções do banco
 
 | Função | Quem pode chamar | O que faz |
@@ -130,6 +138,8 @@ Detalhes de funcionamento: `docs/manutencao-atualizacao-suporte-pdf.md`.
 | `estado_do_sistema_fgrcm(plataforma)` | qualquer pessoa | Diz se há manutenção para a plataforma e a configuração de versão (só dados públicos) |
 | `fgrcm_encerrar_sessoes(user)` | só o servidor (`service_role`) | Apaga as sessões abertas de uma conta desativada |
 | `fgrcm_antes_de_responder_chamado()`, `fgrcm_depois_de_responder_chamado()`, `fgrcm_carimbar_atualizacao()`, `fgrcm_registrar_mudanca_sistema()` | gatilho (não podem ser chamadas pela API) | Autor e horário das respostas, chamado para "em atendimento", carimbo de quem mudou manutenção/versão e histórico |
+| `fgrcm_reservar_notificacao()`, `fgrcm_concluir_notificacao()` (19/11) | só o servidor (`service_role`) | Reservam o envio de um aviso por e-mail (devolve `reservado`, `ja_enviado` ou `em_andamento`) e gravam o resultado. Um envio travado há mais de 10 minutos ou que falhou pode ser tentado de novo |
+| `fgrcm_excluir_dados_da_conta()`, `fgrcm_excluir_pedido()`, `fgrcm_email_removido()` (19/11) | só o servidor (`service_role`) | Exclusão definitiva: apagam ou anonimizam os dados da pessoa numa transação só, conferem de novo que quem pede é administração ativa e recusam conta de administração e a própria conta (política em `docs/melhorias-19-11-2026.md`) |
 
 ### 4.6 Migrações (na ordem)
 
@@ -143,6 +153,8 @@ Detalhes de funcionamento: `docs/manutencao-atualizacao-suporte-pdf.md`.
 | `20261118132205_fgrcm_chamados_manutencao_versoes.sql` | `support_replies`, `meus_chamados_fgrcm`, `sistema_status`, `app_versoes`, `estado_do_sistema_fgrcm` e gatilhos |
 | `20261118132211_fgrcm_encerrar_sessoes_ao_desativar.sql` | `fgrcm_encerrar_sessoes` |
 | `20261118132313_fgrcm_gatilhos_sem_execucao_publica.sql` | Tira a execução pela API das funções de gatilho |
+| `20261119130000_fgrcm_notificacoes_email.sql` (aplicada em 19/11) | `email_notificacoes` e as funções de reserva e conclusão dos avisos |
+| `20261119140000_fgrcm_exclusao_definitiva.sql` (aplicada em 19/11) | Funções da exclusão definitiva (não cria tabela e não apaga nada sozinha) |
 
 As sete migrações estão aplicadas no projeto Supabase do grupo. Nenhuma delas apaga dados. (A quarta foi registrada no Supabase como `20261118042102`; o arquivo com o nome antigo `20261118050000_...` é renomeado com `git mv` no commit de arrumação.)
 
@@ -197,6 +209,15 @@ Para tirar a permissão: `update public.administradores set ativo = false where 
 | `novo_acesso` (`modo` = `codigo`, `senha` ou `email`) | Novo código, nova senha provisória ou código por e-mail para quem perdeu o acesso |
 | `listar_usuarios` | Lista as contas do Supabase Auth |
 | `desativar_usuario` / `reativar_usuario` | Bloqueia ou libera o login da conta (não vale para admins nem para a própria conta). Desde a versão 3 da função, desativar também encerra as sessões abertas |
+| `reenviar_aviso` (versão 4) | Tenta de novo o aviso por e-mail de um pedido (sem duplicar o que já foi enviado) |
+| `excluir_usuario` (versão 4) | Exclusão definitiva da conta. Exige a palavra `EXCLUIR` e o e-mail certo da conta; recusa admins e a própria conta. Bloqueia o login, encerra sessões, anonimiza o banco e apaga a conta do Auth. Se a última parte falhar, devolve `parcial: true` e pode ser repetida |
+| `excluir_pedido` (versão 4) | Apaga uma solicitação (exige `EXCLUIR`). Recusa pedido aprovado cuja conta ainda existe (nesse caso, excluir a conta) |
+
+A versão 4 foi publicada em 19/11. Ela usa `supabase/functions/_shared/email-fgrcm.ts`, então uma nova publicação é pelo terminal (`npx supabase functions deploy admin-fgrcm`), não colando no painel.
+
+### 5.3.1 Função do servidor `notificacoes-fgrcm` (publicada em 19/11)
+
+Pública (sem login, porque quem pede acesso ainda não tem conta). Só aceita o evento `pedido_recebido` com um e-mail e só envia se existir um pedido **pendente** desse e-mail criado nos últimos 15 minutos. Não devolve nenhum dado do pedido, só a situação do envio.
 
 Antes de qualquer ação, a função chama `estado_admin_fgrcm()` com o token da própria pessoa. Se a resposta não for `ok`, devolve 401 ou 403.
 A função antiga `aprovar-pedido` foi substituída por uma versão que só responde 410 (desativada) e pode ser apagada no painel.

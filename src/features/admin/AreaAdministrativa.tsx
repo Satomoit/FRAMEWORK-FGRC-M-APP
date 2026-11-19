@@ -7,6 +7,8 @@
 //   nao_admin   -> "esta conta não tem permissão" (conta comum não vê nada aqui)
 //   precisa_mfa -> pede o código de 6 números do aplicativo autenticador
 //   ok          -> painel com Solicitações, Suporte, Contas e Segurança
+// [integração 19/11] também abre pelo atalho "Área administrativa" do menu Mais (só pra conta de admin)
+// nesse caso usa a mesma sessão do app; "Voltar para o aplicativo" volta sem sair da conta
 // esconder a tela não é a proteção: mesmo se alguém abrir o painel na marra, o banco (RLS) não
 // devolve nenhum dado e a função admin-fgrcm recusa qualquer ação de quem não é admin
 import { useRouter, type Href } from 'expo-router';
@@ -25,11 +27,15 @@ import AbaSistema from './AbaSistema';
 import AbaSolicitacoes from './AbaSolicitacoes';
 import AbaSuporte from './AbaSuporte';
 import { Filtros } from './ui-admin';
+// [integração 19/11] escala do texto nas telas do celular
+import { useEstilosEscalados } from '@/components/escala-texto';
 
 type Estado = 'carregando' | 'sem_sessao' | 'nao_admin' | 'precisa_mfa' | 'ok' | 'erro';
 type Aba = 'solicitacoes' | 'suporte' | 'contas' | 'sistema' | 'seguranca';
 
 export default function AreaAdministrativa() {
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   const router = useRouter();
   const { colors } = useFgrcTheme();
   const [estado, setEstado] = useState<Estado>('carregando');
@@ -50,6 +56,12 @@ export default function AreaAdministrativa() {
   }, []);
 
   useEffect(() => { void conferir(); }, [conferir]);
+
+  // [integração 19/11] volta pro app SEM sair da conta (quem veio pelo atalho do menu Mais continua logado)
+  function voltarParaOApp() {
+    if (router.canGoBack()) router.back();
+    else router.replace('/inicio' as Href);
+  }
 
   async function sair() {
     await supabase.auth.signOut();
@@ -98,7 +110,7 @@ export default function AreaAdministrativa() {
   }
 
   if (estado === 'precisa_mfa') {
-    return <CodigoMfa email={emailLogado} onConfirmou={() => { setEstado('carregando'); void conferir(); }} onSair={() => { void sair(); }} />;
+    return <CodigoMfa email={emailLogado} onConfirmou={() => { setEstado('carregando'); void conferir(); }} onSair={() => { void sair(); }} onVoltar={voltarParaOApp} />;
   }
 
   // ---------- painel ----------
@@ -122,7 +134,11 @@ export default function AreaAdministrativa() {
       {aba === 'sistema' ? <AbaSistema /> : null}
       {aba === 'seguranca' ? <AbaSeguranca /> : null}
       <View style={[styles.divisor, { backgroundColor: colors.divider }]} />
-      <FgrcButton label="Sair da área administrativa" variant="outlined" onPress={() => { void sair(); }} />
+      {/* [integração 19/11] dois botões diferentes: voltar mantém a conta aberta; sair encerra a sessão */}
+      <View style={styles.acoes}>
+        <FgrcButton label="Voltar para o aplicativo" icon="arrow-back-outline" onPress={voltarParaOApp} />
+        <FgrcButton label="Sair da conta" variant="danger" icon="log-out-outline" onPress={() => { void sair(); }} />
+      </View>
     </Page>
   );
 }
@@ -176,7 +192,9 @@ function LoginAdmin({ aviso, onEntrou, onVoltar }: { aviso: string | null; onEnt
 }
 
 // segunda etapa: código do aplicativo autenticador (só pra quem ativou a verificação em duas etapas)
-function CodigoMfa({ email, onConfirmou, onSair }: { email: string | null; onConfirmou: () => void; onSair: () => void }) {
+function CodigoMfa({ email, onConfirmou, onSair, onVoltar }: { email: string | null; onConfirmou: () => void; onSair: () => void; onVoltar: () => void }) {
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   const { colors } = useFgrcTheme();
   const [codigo, setCodigo] = useState('');
   const [erro, setErro] = useState<string | null>(null);
@@ -212,18 +230,24 @@ function CodigoMfa({ email, onConfirmou, onSair }: { email: string | null; onCon
       />
       <View style={styles.acoes}>
         <FgrcButton label={conferindo ? 'Conferindo...' : 'Confirmar'} disabled={conferindo || codigo.length !== 6} onPress={() => { void confirmar(); }} />
-        <Pressable accessibilityRole="button" onPress={onSair}>
-          <Text style={[styles.link, { color: colors.blue }]}>Sair</Text>
+        {/* [integração 19/11] voltar pro app sem digitar o código (e sem sair da conta) */}
+        <Pressable accessibilityRole="button" onPress={onVoltar} style={styles.alvoToque}>
+          <Text style={[styles.link, { color: colors.blue }]}>Voltar para o aplicativo</Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" onPress={onSair} style={styles.alvoToque}>
+          <Text style={[styles.link, { color: colors.blue }]}>Sair da conta</Text>
         </Pressable>
       </View>
     </Page>
   );
 }
 
-const styles = StyleSheet.create({
+const estilosBase = StyleSheet.create({
   centro: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   acoes: { gap: 10, marginTop: 10 },
   divisor: { height: 1, marginVertical: 14 },
   link: { fontSize: 15, fontWeight: '600', textAlign: 'center', marginTop: 6 },
+  // [integração 19/11] área de toque de pelo menos 48 px nos links
+  alvoToque: { minHeight: 48, justifyContent: 'center' },
   codigo: { borderWidth: 1, borderRadius: 10, padding: 12, fontSize: 24, letterSpacing: 8, textAlign: 'center', minHeight: 54, marginBottom: 10 },
 });

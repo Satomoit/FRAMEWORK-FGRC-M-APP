@@ -25,10 +25,14 @@ import { lerDataDigitada, lerDataHoraDigitada, paraDigitar } from '@/lib/datas';
 import { versaoInstalada } from '@/lib/sistema';
 import { lerVersao } from '@/lib/versao';
 import { Cartao, Etiqueta, Linha, TextoVazio, dataHora } from './ui-admin';
+// [integração 19/11] escala do texto nas telas do celular
+import { useEstilosEscalados } from '@/components/escala-texto';
 
 type Aviso = { texto: string; tipo: 'success' | 'error' } | null;
 
 export default function AbaSistema() {
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   const [status, setStatus] = useState<StatusDoSistema | null>(null);
   const [versoes, setVersoes] = useState<VersaoDoApp[]>([]);
   const [historico, setHistorico] = useState<RegistroHistorico[]>([]);
@@ -88,6 +92,8 @@ const NOME_ACAO: Record<string, string> = {
 };
 
 function Manutencao({ status, onSalvo, onErro }: { status: StatusDoSistema; onSalvo: (t: string) => void; onErro: (t: string) => void }) {
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   const { colors } = useFgrcTheme();
   const [mensagem, setMensagem] = useState(status.mensagem ?? '');
   const [previsao, setPrevisao] = useState(paraDigitar(status.previsao_retorno));
@@ -161,19 +167,19 @@ function Manutencao({ status, onSalvo, onErro }: { status: StatusDoSistema; onSa
           <Text style={{ color: colors.text }}>
             Ligar a manutenção? Quem abrir o app vai ver só o aviso (as telas de suporte e de administração continuam abertas).
           </Text>
-          <FgrcButton label={ocupado ? 'Aguarde...' : 'Sim, ligar manutenção'} variant="danger" disabled={ocupado} onPress={() => { void salvar(true); }} />
+          <FgrcButton label={ocupado ? 'Aguarde...' : 'Sim, ligar manutenção'} variant="dangerSolid" icon="construct-outline" disabled={ocupado} onPress={() => { void salvar(true); }} />
           <FgrcButton label="Cancelar" variant="outlined" onPress={() => setConfirmando(null)} />
         </View>
       ) : (
         <View style={styles.acoes}>
           {status.manutencao_ativa ? (
             <>
-              <FgrcButton label={ocupado ? 'Aguarde...' : 'Desligar manutenção'} disabled={ocupado} onPress={() => { void salvar(false); }} />
+              <FgrcButton label={ocupado ? 'Aguarde...' : 'Desligar manutenção'} variant="success" icon="checkmark-circle-outline" disabled={ocupado} onPress={() => { void salvar(false); }} />
               <FgrcButton label="Salvar mudanças no aviso" variant="outlined" disabled={ocupado} onPress={() => { void salvar(true); }} />
             </>
           ) : (
             <>
-              <FgrcButton label="Ligar manutenção" variant="danger" disabled={ocupado} onPress={() => setConfirmando(true)} />
+              <FgrcButton label="Ligar manutenção" variant="danger" icon="construct-outline" disabled={ocupado} onPress={() => setConfirmando(true)} />
               <FgrcButton label="Só salvar o texto (sem ligar)" variant="outlined" disabled={ocupado} onPress={() => { void salvar(false); }} />
             </>
           )}
@@ -186,6 +192,8 @@ function Manutencao({ status, onSalvo, onErro }: { status: StatusDoSistema; onSa
 const NOME_PLATAFORMA: Record<VersaoDoApp['plataforma'], string> = { android: 'Android (APK)', web: 'Navegador (web)', ios: 'iPhone' };
 
 function FormVersao({ versao, onSalvo, onErro }: { versao: VersaoDoApp; onSalvo: (t: string) => void; onErro: (t: string) => void }) {
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   const { colors } = useFgrcTheme();
   const [atual, setAtual] = useState(versao.versao_atual);
   const [minima, setMinima] = useState(versao.versao_minima);
@@ -248,6 +256,13 @@ function FormVersao({ versao, onSalvo, onErro }: { versao: VersaoDoApp; onSalvo:
       </Pressable>
       <Text style={[styles.rotulo, { color: colors.text }]}>Link oficial da versão nova {versao.plataforma === 'web' ? '(opcional na web)' : ''}</Text>
       <TextInput accessibilityLabel="Link oficial" value={url} onChangeText={setUrl} autoCapitalize="none" placeholder="https://expo.dev/artifacts/..." placeholderTextColor={colors.muted} style={campo} />
+      {/* [integração 19/11] dica do link: a conta do Expo mudou de nome (satomoit -> fgrc-m) */}
+      {versao.plataforma === 'android' ? (
+        <Text style={[styles.dica, { color: colors.muted }]}>
+          Use o link da página do build do APK novo no expo.dev (conta fgrc-m). Links antigos com “satomoit” podem não abrir mais.
+          Antes de salvar, abra o link no celular e confira se ele baixa o APK certo.
+        </Text>
+      ) : null}
       <Text style={[styles.rotulo, { color: colors.text }]}>Mensagem (opcional)</Text>
       <TextInput accessibilityLabel="Mensagem da atualização" value={mensagem} onChangeText={setMensagem} maxLength={500} placeholderTextColor={colors.muted} placeholder="Ex.: Esta versão corrige o PDF no Android." style={campo} />
       <Text style={[styles.rotulo, { color: colors.text }]}>O que mudou (opcional)</Text>
@@ -255,13 +270,13 @@ function FormVersao({ versao, onSalvo, onErro }: { versao: VersaoDoApp; onSalvo:
       <Text style={[styles.rotulo, { color: colors.text }]}>Publicada em (opcional)</Text>
       <TextInput accessibilityLabel="Data de publicação" value={publicada} onChangeText={setPublicada} placeholder="18/11/2026" placeholderTextColor={colors.muted} style={campo} />
       <View style={styles.acoes}>
-        <FgrcButton label={ocupado ? 'Aguarde...' : 'Salvar versão'} disabled={ocupado} onPress={() => { void salvar(); }} />
+        <FgrcButton label={ocupado ? 'Aguarde...' : 'Salvar versão'} icon="save-outline" disabled={ocupado} onPress={() => { void salvar(); }} />
       </View>
     </Cartao>
   );
 }
 
-const styles = StyleSheet.create({
+const estilosBase = StyleSheet.create({
   carregando: { marginTop: 30 },
   secao: { fontSize: 17, fontWeight: '700', marginTop: 10, marginBottom: 6 },
   dica: { fontSize: 13, lineHeight: 19, marginBottom: 8 },

@@ -12,11 +12,15 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useCorDoTema, type CorDoTema } from '@/components/cor-do-tema';
+// [integração 19/11] escala do texto nas telas do celular
+import { useEstilosEscalados } from '@/components/escala-texto';
 
 export default function SenhaAlterada() {
   // [tema] cores que seguem o tema escolhido (Configurações ou Opções da página inicial)
   const { cor } = useCorDoTema();
-  const styles = useMemo(() => criarEstilos(cor), [cor]);
+  const estilosBase = useMemo(() => criarEstilos(cor), [cor]);
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   const router = useRouter();
 
   function fazerLogin() {

@@ -2,18 +2,25 @@
 // mostra nome, e-mail, prefeitura, município, estado e situação de cada conta
 // dá pra desativar uma conta (a pessoa não consegue mais entrar) e reativar depois
 // a lista vem da função admin-fgrcm no servidor, pq só ela pode ler as contas do Supabase Auth
+// [integração 19/11] agora também dá pra EXCLUIR uma conta de vez (contas de teste, por exemplo)
+// as três ações ficam separadas e com nomes diferentes: Desativar, Reativar e Excluir definitivamente
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useFgrcTheme } from '@/components/fgrc-colors';
 import { FgrcButton, Notice } from '@/components/fgrc-ui';
-import { alterarConta, listarContas, type ContaCadastrada } from '@/lib/admin';
+import { alterarConta, excluirConta, listarContas, type ContaCadastrada } from '@/lib/admin';
 import { NovoAcesso } from './AcessoDaPessoa';
+import ConfirmarExclusao from './ConfirmarExclusao';
 import { CampoBusca, Cartao, Etiqueta, Filtros, Linha, TextoVazio, combinaBusca, dataHora } from './ui-admin';
+// [integração 19/11] escala do texto nas telas do celular
+import { useEstilosEscalados } from '@/components/escala-texto';
 
 type Filtro = 'ativas' | 'desativadas' | 'todas';
 
 export default function AbaContas() {
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   const { colors } = useFgrcTheme();
   const [contas, setContas] = useState<ContaCadastrada[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -23,6 +30,8 @@ export default function AbaContas() {
   // pede confirmação antes de desativar (pra não clicar sem querer)
   const [confirmando, setConfirmando] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  // [integração 19/11] conta escolhida pra excluir (abre a janela de confirmação)
+  const [excluindo, setExcluindo] = useState<ContaCadastrada | null>(null);
 
   const carregar = useCallback(async () => {
     try {
@@ -54,6 +63,22 @@ export default function AbaContas() {
     } finally {
       setOcupado(false);
     }
+  }
+
+  // [integração 19/11] exclusão definitiva: o servidor bloqueia, limpa os dados pessoais e apaga a conta
+  // se der certo, fecha a janela e recarrega a lista; se der erro (ou terminar só em parte), mostra o motivo
+  async function excluir(c: ContaCadastrada, motivo: string) {
+    setAviso(null);
+    try {
+      const r = await excluirConta(c.id, c.email, motivo || undefined);
+      setAviso({ texto: r.mensagem, tipo: 'success' });
+      setExcluindo(null);
+    } catch (e) {
+      setAviso({ texto: (e as Error).message, tipo: 'error' });
+      setExcluindo(null);
+    }
+    // recarrega sempre (se a exclusão parou no meio, a conta aparece como desativada)
+    await carregar();
   }
 
   if (carregando) return <ActivityIndicator size="large" style={styles.carregando} />;
@@ -99,20 +124,47 @@ export default function AbaContas() {
                 <Text style={{ color: colors.text }}>
                   {c.desativado ? 'Reativar esta conta?' : 'Desativar esta conta? As sessões abertas da pessoa são encerradas e ela não consegue entrar até ser reativada. As avaliações salvas no aparelho dela não são apagadas.'}
                 </Text>
-                <FgrcButton label={ocupado ? 'Aguarde...' : 'Sim, confirmar'} variant={c.desativado ? 'filled' : 'danger'} disabled={ocupado} onPress={() => { void trocar(c); }} />
+                <FgrcButton label={ocupado ? 'Aguarde...' : 'Sim, confirmar'} variant={c.desativado ? 'success' : 'dangerSolid'} disabled={ocupado} onPress={() => { void trocar(c); }} />
                 <FgrcButton label="Cancelar" variant="outlined" onPress={() => setConfirmando(null)} />
               </View>
             ) : (
-              <FgrcButton label={c.desativado ? 'Reativar conta' : 'Desativar conta'} variant="outlined" onPress={() => setConfirmando(c.id)} />
+              <FgrcButton label={c.desativado ? 'Reativar conta' : 'Desativar conta'} variant={c.desativado ? 'successOutlined' : 'danger'} icon={c.desativado ? 'lock-open-outline' : 'lock-closed-outline'} onPress={() => setConfirmando(c.id)} />
             )
+          ) : null}
+          {/* [integração 19/11] excluir de vez: nunca aparece pra conta de administração (o servidor também recusa) */}
+          {!c.admin && confirmando !== c.id ? (
+            <FgrcButton label="Excluir definitivamente" variant="danger" icon="trash-outline" onPress={() => setExcluindo(c)} />
           ) : null}
         </Cartao>
       ))}
+
+      <ConfirmarExclusao
+        aberto={excluindo !== null}
+        titulo="Excluir esta conta definitivamente?"
+        identificacao={excluindo ? [
+          { rotulo: 'Nome', valor: excluindo.nome },
+          { rotulo: 'E-mail', valor: excluindo.email },
+          { rotulo: 'Prefeitura', valor: excluindo.prefeitura },
+          { rotulo: 'Município / Estado', valor: excluindo.municipio || excluindo.estado ? `${excluindo.municipio ?? '—'} / ${excluindo.estado ?? '—'}` : null },
+        ] : []}
+        consequencias={[
+          'A pessoa sai do aplicativo na hora e não consegue mais entrar com este e-mail.',
+          'A conta de login é apagada.',
+          'Pedidos de acesso ainda pendentes deste e-mail são apagados. Os já decididos ficam só como registro, sem nome e sem e-mail.',
+          'As mensagens de suporte da pessoa ficam sem nome, e-mail e texto (fica só o assunto e a data).',
+          'O histórico da administração continua, mas sem o e-mail da pessoa.',
+          'As avaliações e relatórios salvos no celular da pessoa NÃO são apagados (eles nunca foram para o servidor).',
+          'Se quiser só impedir o acesso por um tempo, use "Desativar conta" em vez de excluir.',
+        ]}
+        rotuloConfirmar="Excluir definitivamente"
+        onConfirmar={motivo => excluindo ? excluir(excluindo, motivo) : Promise.resolve()}
+        onCancelar={() => setExcluindo(null)}
+      />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const estilosBase = StyleSheet.create({
   carregando: { marginTop: 30 },
   titulo: { fontSize: 16, fontWeight: '700', marginVertical: 4 },
   link: { fontSize: 15, fontWeight: '600', marginVertical: 8 },

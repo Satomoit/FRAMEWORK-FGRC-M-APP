@@ -18,11 +18,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useCorDoTema, type CorDoTema } from '@/components/cor-do-tema';
 import { contaLiberada } from '@/lib/conta';
 import { supabase } from '@/lib/supabase';
+// [integração 19/11] escala do texto nas telas do celular
+import { useEstilosEscalados } from '@/components/escala-texto';
 
 export default function LoginScreen() {
   // [tema] cores que seguem o tema escolhido (Configurações ou Opções da página inicial)
   const { cor } = useCorDoTema();
-  const styles = useMemo(() => criarEstilos(cor), [cor]);
+  const estilosBase = useMemo(() => criarEstilos(cor), [cor]);
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   // [integração] usado pelos links Esqueci minha senha e Solicitar acesso
   const router = useRouter();
   const [email, setEmail] = useState('');

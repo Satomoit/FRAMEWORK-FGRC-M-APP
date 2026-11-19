@@ -1,7 +1,7 @@
 // [integração] tudo que a administração usa pra passar o acesso pra pessoa
 //   CaixaDeAcesso = mostra a senha provisória ou o código UMA vez, com botão de copiar e de compartilhar
 //   NovoAcesso    = pra quem perdeu: gera nova senha, gera novo código ou manda o código por e-mail
-// o código (6 números) a pessoa usa em Login > "Seu pedido foi aprovado? Ativar acesso"
+// o código (8 números, ver src/lib/codigo-de-acesso.ts) a pessoa usa em Login > "Seu pedido foi aprovado? Ativar acesso"
 // ele vale por pouco tempo (1 hora no padrão do Supabase) e só funciona uma vez
 import { useState } from 'react';
 import { Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
@@ -9,6 +9,8 @@ import { Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native
 import { useFgrcTheme } from '@/components/fgrc-colors';
 import { FgrcButton, Notice } from '@/components/fgrc-ui';
 import { novoAcesso } from '@/lib/admin';
+// [integração 19/11] escala do texto nas telas do celular
+import { useEstilosEscalados } from '@/components/escala-texto';
 
 export type AcessoGerado = { email: string; tipo: 'senha' | 'codigo'; valor: string };
 
@@ -20,6 +22,8 @@ function mensagemPara(a: AcessoGerado): string {
 }
 
 export function CaixaDeAcesso({ acesso, onFechar }: { acesso: AcessoGerado; onFechar: () => void }) {
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   const { colors } = useFgrcTheme();
   const [copiado, setCopiado] = useState(false);
 
@@ -77,6 +81,8 @@ export function NovoAcesso({ email, userId, pedidoId, onGerado }: {
   pedidoId?: string;
   onGerado?: () => void;
 }) {
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   const { colors } = useFgrcTheme();
   const [aberto, setAberto] = useState(false);
   const [confirmarSenha, setConfirmarSenha] = useState(false);
@@ -125,7 +131,7 @@ export function NovoAcesso({ email, userId, pedidoId, onGerado }: {
           <Text style={{ color: colors.text }}>
             Gerar uma senha provisória nova? Se a pessoa já criou a própria senha, ela deixa de funcionar.
           </Text>
-          <FgrcButton label="Sim, gerar nova senha" variant="danger" disabled={ocupado} onPress={() => { void gerar('senha'); }} />
+          <FgrcButton label="Sim, gerar nova senha" variant="dangerSolid" icon="key-outline" disabled={ocupado} onPress={() => { void gerar('senha'); }} />
           <FgrcButton label="Cancelar" variant="outlined" onPress={() => setConfirmarSenha(false)} />
         </View>
       ) : (
@@ -141,7 +147,7 @@ export function NovoAcesso({ email, userId, pedidoId, onGerado }: {
   );
 }
 
-const styles = StyleSheet.create({
+const estilosBase = StyleSheet.create({
   caixa: { borderWidth: 1, borderRadius: 14, padding: 14, marginVertical: 10, gap: 6 },
   bloco: { gap: 8, marginTop: 8 },
   titulo: { fontSize: 16, fontWeight: '700' },

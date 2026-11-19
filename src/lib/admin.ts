@@ -79,6 +79,13 @@ export async function verificarEstadoAdmin(): Promise<'sem_sessao' | 'nao_admin'
   return data === 'ok' || data === 'precisa_mfa' ? data : 'nao_admin';
 }
 
+// [integração 19/11] o atalho "Área administrativa" do menu Mais aparece pra quem tem vínculo com a administração
+// 'precisa_mfa' também mostra: a pessoa é admin, só falta o código da verificação em duas etapas
+// (o atalho NÃO pula essa etapa: a tela /admin pede o código igual pede pra quem entra pelo Login)
+export function mostraAtalhoDaAdministracao(estado: string | null | undefined): boolean {
+  return estado === 'ok' || estado === 'precisa_mfa';
+}
+
 // ---------- pedidos de acesso ----------
 
 export async function listarPedidos(): Promise<Pedido[]> {
@@ -112,8 +119,10 @@ async function chamarFuncaoAdmin<T>(corpo: Record<string, unknown>): Promise<T> 
 //   'senha'   = senha provisória (não precisa de e-mail)
 //   'codigo'  = código de ativação que a administração passa pra pessoa (não precisa de e-mail)
 //   'convite' = o Supabase manda o código por e-mail (precisa do SMTP configurado)
+// [integração 19/11] "aviso" = o e-mail "solicitação aprovada" (enviado, falhou ou não configurado)
+// a aprovação vale mesmo se o aviso falhar; a tela mostra a frase que vem do servidor
 export function aprovarPedido(pedidoId: string, modo: 'senha' | 'codigo' | 'convite') {
-  return chamarFuncaoAdmin<{ mensagem: string; senhaProvisoria: string | null; codigo: string | null }>({ acao: 'aprovar', pedidoId, modo });
+  return chamarFuncaoAdmin<{ mensagem: string; senhaProvisoria: string | null; codigo: string | null; aviso?: RespostaAviso }>({ acao: 'aprovar', pedidoId, modo });
 }
 
 // [integração] novo acesso pra quem perdeu a senha provisória ou o código
@@ -312,4 +321,54 @@ export async function iniciarCadastroMfa() {
 export async function concluirCadastroMfa(factorId: string, codigo: string): Promise<void> {
   const { error } = await supabase.auth.mfa.challengeAndVerify({ factorId, code: codigo.trim() });
   if (error) throw new Error('Código errado ou vencido. Confira no aplicativo e tente de novo.');
+}
+
+// ---------- [integração 19/11] avisos por e-mail (solicitação recebida e aprovada) ----------
+
+export type EventoAviso = 'pedido_recebido' | 'pedido_aprovado';
+export type SituacaoAviso = 'enviando' | 'enviado' | 'falhou' | 'nao_configurado';
+export type RespostaAviso = { status: SituacaoAviso | 'ja_enviado' | 'em_andamento'; mensagem: string };
+export type AvisoRegistrado = { evento: EventoAviso; status: SituacaoAviso; tentativas: number; atualizado_em: string; erro: string | null };
+
+export const NOME_EVENTO_AVISO: Record<EventoAviso, string> = {
+  pedido_recebido: 'Confirmação de pedido recebido',
+  pedido_aprovado: 'Aviso de aprovação',
+};
+export const NOME_SITUACAO_AVISO: Record<SituacaoAviso, string> = {
+  enviando: 'Sendo enviado',
+  enviado: 'Enviado',
+  falhou: 'Não enviado (falhou)',
+  nao_configurado: 'Não enviado (envio de e-mail não configurado)',
+};
+
+// lê a situação dos avisos de um pedido (só a administração consegue ler: RLS)
+// se a tabela ainda não existir no Supabase (migração não aplicada), volta lista vazia sem quebrar a tela
+export async function listarAvisos(pedidoId: string): Promise<AvisoRegistrado[]> {
+  const { data, error } = await supabase
+    .from('email_notificacoes')
+    .select('evento, status, tentativas, atualizado_em, erro')
+    .eq('pedido_id', pedidoId)
+    .order('criado_em', { ascending: true });
+  if (error) return [];
+  return (data ?? []) as AvisoRegistrado[];
+}
+
+// manda de novo um aviso que falhou (o servidor não repete aviso que já saiu)
+export function reenviarAviso(pedidoId: string, evento: EventoAviso) {
+  return chamarFuncaoAdmin<{ aviso: RespostaAviso }>({ acao: 'reenviar_aviso', pedidoId, evento });
+}
+
+// ---------- [integração 19/11] exclusão definitiva ----------
+// as duas exigem a palavra EXCLUIR (o servidor confere de novo) e só funcionam com a sessão
+// da administração já verificada (com o código da verificação em duas etapas, se ela estiver ligada)
+
+// exclui a conta de vez e trata os dados pessoais dela no servidor (pedidos, suporte, avisos e histórico)
+// o e-mail vai junto pra o servidor conferir que é a mesma conta que ta na tela
+export function excluirConta(userId: string, email: string, motivo?: string) {
+  return chamarFuncaoAdmin<{ mensagem: string }>({ acao: 'excluir_usuario', userId, email, confirmacao: 'EXCLUIR', observacao: motivo });
+}
+
+// exclui uma solicitação de acesso (pendente, recusada, ou aprovada cuja conta já não existe)
+export function excluirPedido(pedidoId: string, motivo?: string) {
+  return chamarFuncaoAdmin<{ mensagem: string }>({ acao: 'excluir_pedido', pedidoId, confirmacao: 'EXCLUIR', observacao: motivo });
 }

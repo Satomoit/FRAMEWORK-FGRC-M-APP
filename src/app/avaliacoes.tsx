@@ -13,8 +13,12 @@ import { finalizarAvaliacao } from '@/lib/avaliacoes-reais';
 import { prefeituraDaSessao } from '@/lib/conta';
 // esse rascunho é local e separado por conta (não manda as respostas pra prefeitura nem pro Supabase)
 import { lerRascunho, limparRascunho, salvarRascunho, type Respostas } from '@/lib/armazenamento-local';
+// [integração 19/11] escala do texto nas telas do celular
+import { useEstilosEscalados } from '@/components/escala-texto';
 
 export default function Avaliacoes() {
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   const router = useRouter();
   // [integração] cores do tema (o aviso de cima era sempre claro, até no modo escuro)
   const { colors } = useFgrcTheme();
@@ -101,7 +105,7 @@ Avaliação em andamento: as respostas são salvas neste aparelho; ao finalizar,
   );
 }
 
-const styles = StyleSheet.create({
+const estilosBase = StyleSheet.create({
   raiz: { flex: 1, backgroundColor: '#F4F7FC' },
   carregando: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   aviso: { fontSize: 12, padding: 12, backgroundColor: '#E8F0F8', color: '#17395B' },

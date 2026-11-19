@@ -19,6 +19,11 @@ import {
   usePreferencias,
 } from "@/features/p11-configuracoes/PreferenciasProvider";
 import { contaLiberada } from "@/lib/conta";
+// [integração 19/11] confere em segundo plano se a conta é da administração (atalho do menu Mais na hora)
+import {
+  conferirEGuardarEstadoDoAtalho,
+  esquecerEstadoDoAtalho,
+} from "@/lib/atalho-admin";
 import { supabase } from "@/lib/supabase";
 
 SplashScreen.preventAutoHideAsync();
@@ -71,6 +76,14 @@ function RaizDoApp() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // [integração 19/11] assim que entra na conta, já descobre se ela é da administração (por trás, sem travar nada)
+  // quando a pessoa abrir o menu Mais, o botão "Área administrativa" já ta pronto
+  // saiu da conta: esquece (pra próxima conta que entrar no celular não ver o botão da anterior nem por um segundo)
+  useEffect(() => {
+    if (logado) void conferirEGuardarEstadoDoAtalho();
+    else esquecerEstadoDoAtalho();
+  }, [logado]);
+
   return (
     <ThemeProvider value={tema}>
       <AnimatedSplashOverlay />
@@ -100,41 +113,41 @@ function RaizDoApp() {
         // [manutenção e atualização] a guarda fica por fora de tudo: se a versão for velha demais
         // ou a administração ligar a manutenção, ela cobre as telas (sem desmontar nada)
         <GuardaDoSistema>
-        <AppNavigation logado={logado}>
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: {
-                backgroundColor: fundo,
-              },
-            }}
-          >
-            {/* [integração B1] essas rotas só abrem com login (guard)
+          <AppNavigation logado={logado}>
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: {
+                  backgroundColor: fundo,
+                },
+              }}
+            >
+              {/* [integração B1] essas rotas só abrem com login (guard)
                 sem sessão, ou digitando a URL sem login, o Expo Router manda pro "/"
                 públicas (fora daqui): index (login), solicitar-acesso, explore,
                 [entrada nova] index agora é a página Conheça o FGRC-M e o login foi pra /entrar
                 criar-nova-senha e senha-alterada
                 rota nova em src/app precisa entrar aqui ou na lista de públicas do app-navigation
                 (se esquecer, a rede de segurança de lá bloqueia sem login do mesmo jeito) */}
-            <Stack.Protected guard={logado} redirectTo="/">
-              <Stack.Screen name="inicio" />
-              <Stack.Screen name="avaliacoes" />
-              <Stack.Screen name="revisar-avaliacao" />
-              <Stack.Screen name="avaliacao-finalizada" />
-              <Stack.Screen name="resultados-revisao" />
-              <Stack.Screen name="relatorios-revisao" />
-              <Stack.Screen name="mais" />
-              <Stack.Screen name="minhas-telas" />
-              <Stack.Screen name="editar-perfil" />
-              <Stack.Screen name="alteracoes-salvas" />
-              {/* [integração P11] telas 22 (configurações) e 20 (alterar senha) da Nicole */}
-              <Stack.Screen name="configuracoes" />
-              <Stack.Screen name="alterar-senha" />
-              {/* [suporte] lista dos chamados da própria pessoa, com as respostas da equipe */}
-              <Stack.Screen name="meus-chamados" />
-            </Stack.Protected>
-          </Stack>
-        </AppNavigation>
+              <Stack.Protected guard={logado} redirectTo="/">
+                <Stack.Screen name="inicio" />
+                <Stack.Screen name="avaliacoes" />
+                <Stack.Screen name="revisar-avaliacao" />
+                <Stack.Screen name="avaliacao-finalizada" />
+                <Stack.Screen name="resultados-revisao" />
+                <Stack.Screen name="relatorios-revisao" />
+                <Stack.Screen name="mais" />
+                <Stack.Screen name="minhas-telas" />
+                <Stack.Screen name="editar-perfil" />
+                <Stack.Screen name="alteracoes-salvas" />
+                {/* [integração P11] telas 22 (configurações) e 20 (alterar senha) da Nicole */}
+                <Stack.Screen name="configuracoes" />
+                <Stack.Screen name="alterar-senha" />
+                {/* [suporte] lista dos chamados da própria pessoa, com as respostas da equipe */}
+                <Stack.Screen name="meus-chamados" />
+              </Stack.Protected>
+            </Stack>
+          </AppNavigation>
         </GuardaDoSistema>
       )}
     </ThemeProvider>

@@ -7,6 +7,8 @@ import { abrirRelatorioPdf, baixarRelatorioPdf, compartilharRelatorioPdf, type R
 import { FgrcButton } from '@/components/fgrc-ui';
 import { radius, useCoresP06, type CoresP06 } from './theme';
 import { Report } from './types';
+// [integração 19/11] escala do texto nas telas do celular
+import { useEstilosEscalados } from '@/components/escala-texto';
 
 interface Props {
   reports: Report[];
@@ -19,7 +21,9 @@ interface Props {
 export function RelatoriosScreen({ reports, recommendationsFor, onOpenReport, onStartAssessment }: Props) {
   // [integração] cores seguem o tema do app (claro, escuro e alto contraste das Configurações)
   const colors = useCoresP06();
-  const styles = useMemo(() => criarEstilos(colors), [colors]);
+  const estilosBase = useMemo(() => criarEstilos(colors), [colors]);
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   // [correção Android] qual botão ta trabalhando (pra mostrar "Gerando..." só nele)
   const [acaoAtual, setAcaoAtual] = useState<Acao | null>(null);
@@ -74,7 +78,8 @@ export function RelatoriosScreen({ reports, recommendationsFor, onOpenReport, on
 
           <View style={styles.divider} />
 
-          <Pressable style={styles.row} onPress={() => onOpenReport?.(r)} accessibilityRole="button">
+          {/* [integração 19/11] acessibilidade: área de toque de 48 e o leitor de tela fala de qual relatório é */}
+          <Pressable style={[styles.row, styles.alvoDeToque]} onPress={() => onOpenReport?.(r)} accessibilityRole="button" accessibilityLabel={`Visualizar relatório de ${r.date}`}>
             <Text style={styles.link}>Visualizar relatório</Text>
             <Ionicons name="chevron-forward" size={22} color={colors.primary} />
           </Pressable>
@@ -129,7 +134,9 @@ const criarEstilos = (colors: CoresP06) => StyleSheet.create({
   meta: { fontSize: 15, color: colors.text, marginTop: 4 },
   divider: { height: 1, backgroundColor: colors.divider, marginVertical: 14 },
   link: { fontSize: 16, fontWeight: '700', color: colors.primary },
-  action: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  // [integração 19/11] minHeight 48 nos botões Visualizar/Baixar/Compartilhar (antes eram só texto + ícone, difícil de acertar)
+  action: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 48, paddingHorizontal: 4 },
+  alvoDeToque: { minHeight: 48 },
   // [correção Android] 3 botões: quebram linha sozinhos em celular estreito
   acoes: { marginTop: 16, flexWrap: 'wrap', rowGap: 12, columnGap: 16, justifyContent: 'flex-start' },
   actionText: { fontSize: 14, fontWeight: '700', color: colors.primary },

@@ -136,6 +136,34 @@ O **Site URL** (Authentication > URL Configuration) é para onde o Supabase mand
 **Authentication** > **Sign In / Providers** > **Email** > *Email OTP Expiration*.
 O padrão é 3600 segundos (1 hora), que é o valor recomendado pelo Supabase. Se o código vencer antes de a pessoa usar, gere outro na área administrativa (botão "Novo acesso"). Não precisa aumentar.
 
+## Parte 7: avisos "Solicitação de acesso recebida" e "Solicitação de acesso aprovada" (19/11/2026)
+
+Esses dois avisos **não** são e-mails do Supabase Auth. Quem manda são as funções do servidor `notificacoes-fgrcm` (pedido recebido) e `admin-fgrcm` (pedido aprovado), com o modelo de `supabase/functions/_shared/email-fgrcm.ts`. Os e-mails do Auth (convite, código, recuperação de senha) continuam como nas partes anteriores.
+
+As funções **não enxergam** o SMTP cadastrado na Parte 2, então precisam dos próprios segredos. Sem eles, nada é enviado: o pedido e a aprovação funcionam normalmente e o painel mostra o aviso como "não configurado".
+
+**Onde cadastrar:** Supabase > **Edge Functions** > **Secrets** (ou *Project Settings* > *Edge Functions*). Digite os valores só ali.
+
+| Nome do segredo | Valor | Observação |
+|---|---|---|
+| `EMAIL_PROVEDOR` | `smtp` | Ou `resend` (ver abaixo) |
+| `EMAIL_REMETENTE` | `FGRC-M <o-gmail-do-projeto@gmail.com>` | Com o Gmail, tem que ser o mesmo endereço do `SMTP_USUARIO` |
+| `SMTP_HOST` | `smtp.gmail.com` | |
+| `SMTP_PORT` | `465` | **Obrigatório 465.** As funções do Supabase bloqueiam as portas 25 e 587; com elas o envio é recusado antes de tentar |
+| `SMTP_USUARIO` | o Gmail do projeto | |
+| `SMTP_SENHA` | a senha de app da Parte 1 | Pode ser a mesma da Parte 2 ou uma senha de app nova só para as funções |
+
+**Alternativa (Resend):** `EMAIL_PROVEDOR` = `resend`, `EMAIL_REMETENTE` = um endereço de um domínio verificado no Resend e `RESEND_API_KEY` = a chave criada no Resend. Precisa de domínio próprio; é o caminho para uso real (menos chance de cair no spam).
+
+**Como o envio é controlado:**
+
+- Um aviso por pedido e por tipo (tabela `email_notificacoes`): reenviar a tela ou aprovar de novo não manda dois e-mails.
+- Cada tentativa fica registrada com a situação (`enviado`, `falhou`, `nao_configurado`) e o erro resumido. Só a administração vê, em Solicitações > pedido > **Avisos por e-mail**, com o botão **Tentar enviar de novo**.
+- O aviso de pedido recebido só sai para um pedido **pendente** feito nos últimos 15 minutos com aquele e-mail. A tela "Solicitação enviada" só fala do e-mail quando o provedor confirmou o envio.
+- O aviso de aprovado não leva senha nem código: explica como entrar conforme o jeito escolhido na aprovação.
+
+**Teste:** depois de publicar as funções (`docs/melhorias-19-11-2026.md`, seção 4), faça um pedido com um e-mail de teste da equipe, confira a caixa de entrada (e o spam) e aprove. Não use e-mails de pessoas de fora nos testes.
+
 ## Como testar
 
 1. Abra `/admin` > Solicitações > um pedido pendente com um Gmail seu > **Aprovar e enviar código por e-mail**.

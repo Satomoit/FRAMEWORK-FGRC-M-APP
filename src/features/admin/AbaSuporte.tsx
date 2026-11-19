@@ -7,6 +7,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { useFgrcTheme } from '@/components/fgrc-colors';
+// [integração B11] link de e-mail com corpo preenchido (sem o "undefined" do Gmail)
+import { linkDeRespostaPorEmail } from '@/lib/email-resposta-suporte';
 import { FgrcButton, Notice } from '@/components/fgrc-ui';
 import {
   NOME_STATUS_SUPORTE,
@@ -21,12 +23,16 @@ import {
   type StatusSuporte,
 } from '@/lib/admin';
 import { CampoBusca, Cartao, Etiqueta, Filtros, Linha, TextoVazio, combinaBusca, dataHora } from './ui-admin';
+// [integração 19/11] escala do texto nas telas do celular
+import { useEstilosEscalados } from '@/components/escala-texto';
 
 type Filtro = StatusSuporte | 'todos';
 
 const tomDoStatus = (s: StatusSuporte) => (s === 'resolvido' ? 'bom' : s === 'em_atendimento' ? 'neutro' : 'alerta');
 
 export default function AbaSuporte() {
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   const { colors } = useFgrcTheme();
   const [mensagens, setMensagens] = useState<MensagemSuporte[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -110,8 +116,8 @@ export default function AbaSuporte() {
   if (aberta) {
     // abre o programa de e-mail do aparelho já com o endereço e o assunto preenchidos
     const responderPorEmail = () => {
-      const assunto = encodeURIComponent(`Re: ${aberta.assunto} (FGRC-M)`);
-      void Linking.openURL(`mailto:${aberta.email}?subject=${assunto}`);
+      // [integração B11] agora vai com saudação e a mensagem original no corpo (antes o Gmail mostrava "undefined")
+      void Linking.openURL(linkDeRespostaPorEmail(aberta));
     };
     return (
       <View>
@@ -172,14 +178,14 @@ export default function AbaSuporte() {
         <View style={styles.acoes}>
           {/* abre o programa de e-mail DESTE aparelho (Gmail, Outlook...) com o endereço preenchido
               o app não manda esse e-mail sozinho e ele não fica registrado aqui */}
-          <FgrcButton label="Responder por e-mail (abre seu programa de e-mail)" variant="outlined" onPress={responderPorEmail} />
+          <FgrcButton label="Responder por e-mail (abre seu programa de e-mail)" variant="outlined" icon="mail-outline" onPress={responderPorEmail} />
           {aberta.status !== 'em_atendimento' ? (
-            <FgrcButton label={ocupado ? 'Aguarde...' : 'Marcar como em atendimento'} disabled={ocupado} onPress={() => { void mudar('em_atendimento'); }} />
+            <FgrcButton label={ocupado ? 'Aguarde...' : 'Marcar como em atendimento'} icon="hourglass-outline" disabled={ocupado} onPress={() => { void mudar('em_atendimento'); }} />
           ) : null}
           {aberta.status !== 'resolvido' ? (
-            <FgrcButton label={ocupado ? 'Aguarde...' : 'Marcar como resolvida'} disabled={ocupado} onPress={() => { void mudar('resolvido'); }} />
+            <FgrcButton label={ocupado ? 'Aguarde...' : 'Marcar como resolvida'} variant="success" icon="checkmark-done-outline" disabled={ocupado} onPress={() => { void mudar('resolvido'); }} />
           ) : (
-            <FgrcButton label="Reabrir mensagem" variant="outlined" disabled={ocupado} onPress={() => { void mudar('aberto'); }} />
+            <FgrcButton label="Reabrir mensagem" variant="outlined" icon="arrow-undo-outline" disabled={ocupado} onPress={() => { void mudar('aberto'); }} />
           )}
         </View>
 
@@ -228,7 +234,7 @@ export default function AbaSuporte() {
   );
 }
 
-const styles = StyleSheet.create({
+const estilosBase = StyleSheet.create({
   carregando: { marginTop: 30 },
   titulo: { fontSize: 16, fontWeight: '700', marginTop: 6 },
   link: { fontSize: 15, fontWeight: '600', marginVertical: 8 },

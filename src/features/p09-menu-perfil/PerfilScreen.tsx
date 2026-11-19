@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useFgrcTheme } from '@/components/fgrc-colors';
 import { FgrcButton, FormField, Notice, Page, UserGlyph } from '@/components/fgrc-ui';
+// [integração 19/11] escala do texto nas telas do celular
+import { useEstilosEscalados } from '@/components/escala-texto';
 
 // esses são os campos que o perfil conhece
 export type ProfileData = {
@@ -41,6 +43,8 @@ type Props = {
 
 // componente pequeno que mostra cada informação do perfil
 function FieldDisplay({ label, value, last = false }: { label: string; value: string; last?: boolean }) {
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   // pega a paleta clara ou escura
   const { colors } = useFgrcTheme();
   // o conteúdo muda de acordo com o modo escolhido
@@ -54,6 +58,8 @@ function FieldDisplay({ label, value, last = false }: { label: string; value: st
 
 // essa é a tela 18 do protótipo (Meu perfil)
 export default function PerfilScreen({ profile, onSaveProfile, onBack, onChangePassword, onOpenChangePassword }: Props) {
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   const { colors } = useFgrcTheme();
   // começa mostrando o perfil (edit e password só aparecem quando vc clicar)
   const [mode, setMode] = useState<ProfileMode>('view');
@@ -264,7 +270,7 @@ export default function PerfilScreen({ profile, onSaveProfile, onBack, onChangeP
 }
 
 // estilos do perfil (avatar campos e espaço entre os botões)
-const styles = StyleSheet.create({
+const estilosBase = StyleSheet.create({
   // centraliza o nome avatar e cargo
   summary: { alignItems: 'center', marginTop: 3, marginBottom: 22 },
   avatar: { width: 86, height: 86, borderRadius: 43, alignItems: 'center', justifyContent: 'center', marginBottom: 17 },

@@ -7,8 +7,12 @@ import {
 } from "react-native";
 
 import { useRouter } from "expo-router";
+// [integração 19/11] escala do texto nas telas do celular
+import { useEstilosEscalados } from '@/components/escala-texto';
 
 export default function AlteracoesSalvas() {
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   const router = useRouter();
 
   function voltarPerfil() {
@@ -50,7 +54,7 @@ export default function AlteracoesSalvas() {
   );
 }
 
-const styles = StyleSheet.create({
+const estilosBase = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F4F7FC",

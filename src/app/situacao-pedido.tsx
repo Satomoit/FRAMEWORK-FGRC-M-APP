@@ -10,10 +10,14 @@ import { useFgrcTheme } from '@/components/fgrc-colors';
 import { FgrcButton, FormField, Notice, Page } from '@/components/fgrc-ui';
 import { formatoDeEmailValido } from '@/lib/email-institucional';
 import { supabase } from '@/lib/supabase';
+// [integração 19/11] escala do texto nas telas do celular
+import { useEstilosEscalados } from '@/components/escala-texto';
 
 type Situacao = 'pendente' | 'aprovado' | 'recusado' | 'nao_encontrado';
 
 export default function SituacaoDoPedido() {
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   const router = useRouter();
   const { colors } = useFgrcTheme();
   const [email, setEmail] = useState('');
@@ -99,7 +103,7 @@ export default function SituacaoDoPedido() {
   );
 }
 
-const styles = StyleSheet.create({
+const estilosBase = StyleSheet.create({
   cartao: { borderWidth: 1, borderRadius: 14, padding: 16, marginTop: 16, gap: 6 },
   titulo: { fontSize: 18, fontWeight: '800' },
   texto: { fontSize: 15, lineHeight: 22, marginBottom: 6 },

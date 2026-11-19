@@ -17,7 +17,9 @@ import { usePreferencias } from './PreferenciasProvider';
 // [integração P11] barrinha tipo volume pro tamanho do texto
 import BarraTamanhoTexto from './BarraTamanhoTexto';
 
-export default function ConfiguracoesScreen() {
+// [integração 19/11] prop opcional: a rota /configuracoes passa a função do "Rever tutorial"
+// (sem ela a seção Ajuda não aparece, então a tela continua funcionando igual sozinha)
+export default function ConfiguracoesScreen({ onReverTutorial }: { onReverTutorial?: () => void } = {}) {
   const {
     preferencias,
     carregando,
@@ -299,6 +301,47 @@ export default function ConfiguracoesScreen() {
             </View>
           </View>
 
+          {/* [integração 19/11] Ajuda: rever o tutorial guiado da página inicial */}
+          {onReverTutorial ? (
+            <>
+              <Text
+                style={[
+                  styles.sectionTitle,
+                  { color: cores.texto, fontSize: 20 * escala },
+                ]}
+              >
+                Ajuda
+              </Text>
+
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Rever tutorial"
+                accessibilityHint="Abre a página inicial e mostra de novo onde fica cada coisa"
+                onPress={onReverTutorial}
+                style={({ pressed }) => [
+                  styles.card,
+                  styles.linhaAjuda,
+                  {
+                    backgroundColor: cores.cartao,
+                    borderColor: cores.borda,
+                    opacity: pressed ? 0.8 : 1,
+                  },
+                ]}
+              >
+                <Ionicons name="help-circle-outline" size={26 * escala} color={cores.destaque} />
+                <View style={styles.contrastDescription}>
+                  <Text style={[styles.label, { color: cores.texto, fontSize: 16 * escala }]}>
+                    Rever tutorial
+                  </Text>
+                  <Text style={{ color: cores.secundario, fontSize: 13 * escala, lineHeight: 20 * escala }}>
+                    Mostra de novo, na página inicial, onde fica cada coisa.
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={22 * escala} color={cores.destaque} />
+              </Pressable>
+            </>
+          ) : null}
+
           <Text
             accessibilityLiveRegion="polite"
             style={[
@@ -334,6 +377,13 @@ export default function ConfiguracoesScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+  },
+  // [integração 19/11] linha do "Rever tutorial" (ícone, texto e setinha lado a lado)
+  linhaAjuda: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    minHeight: 64,
   },
   loading: {
     flex: 1,

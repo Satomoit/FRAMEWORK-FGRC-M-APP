@@ -7,6 +7,8 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { useFgrcTheme } from '@/components/fgrc-colors';
 import { Page } from '@/components/fgrc-ui';
+// [integração 19/11] escala do texto nas telas do celular
+import { useEstilosEscalados } from '@/components/escala-texto';
 
 // cada bloco = um título e alguns parágrafos curtos (linguagem simples, sem termo técnico)
 const SECOES: { titulo: string; textos: string[] }[] = [
@@ -57,6 +59,8 @@ const SECOES: { titulo: string; textos: string[] }[] = [
 ];
 
 export default function Privacidade() {
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   const router = useRouter();
   const { colors } = useFgrcTheme();
 
@@ -80,7 +84,7 @@ export default function Privacidade() {
   );
 }
 
-const styles = StyleSheet.create({
+const estilosBase = StyleSheet.create({
   secao: { marginBottom: 18 },
   titulo: { fontSize: 18, fontWeight: '700', marginBottom: 6 },
   texto: { fontSize: 15, lineHeight: 23, marginBottom: 8 },

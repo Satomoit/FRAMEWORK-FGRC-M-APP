@@ -13,6 +13,8 @@ import { dadosDaConta } from '@/lib/conta';
 import { formatoDeEmailValido } from '@/lib/email-institucional';
 import { plataformaDoPedido } from '@/lib/plataforma';
 import { supabase } from '@/lib/supabase';
+// [integração 19/11] escala do texto nas telas do celular
+import { useEstilosEscalados } from '@/components/escala-texto';
 
 // assuntos fixos (fica mais fácil pra equipe separar os pedidos)
 const ASSUNTOS = [
@@ -25,6 +27,8 @@ const ASSUNTOS = [
 const LIMITE_MENSAGEM = 1500;
 
 export default function Suporte() {
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   const router = useRouter();
   const { colors } = useFgrcTheme();
   const [nome, setNome] = useState('');
@@ -186,7 +190,7 @@ export default function Suporte() {
   );
 }
 
-const styles = StyleSheet.create({
+const estilosBase = StyleSheet.create({
   bloco: { marginTop: 16, gap: 4 },
   rotulo: { fontSize: 15, fontWeight: '600', marginTop: 10, marginBottom: 8 },
   assuntos: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

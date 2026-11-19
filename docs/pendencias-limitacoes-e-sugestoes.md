@@ -1,6 +1,6 @@
 # Pendências, limitações e sugestões
 
-**Versão:** 18/11/2026
+**Versão:** 19/11/2026 (mudanças do dia em `docs/melhorias-19-11-2026.md`)
 Lista do que ainda falta, do que funciona com limitação, das decisões que dependem do grupo e das sugestões para o repositório acadêmico. Nada aqui foi alterado no repositório da organização.
 
 ---
@@ -19,6 +19,8 @@ Nenhuma delas pede para colar senha ou chave em lugar nenhum além do próprio p
 | 5 | Modelos de e-mail | Authentication > Emails > Templates > *Invite user*, *Magic Link* e *Reset password*. Textos prontos no mesmo documento | Colocar `{{ .Token }}` no texto para a pessoa receber o código que digita em "Ativar acesso". **Conferir que *Invite user* e *Magic Link* não têm `{{ .ConfirmationURL }}`** (o link de acesso foi retirado; ver seção 3) |
 | 6 | Endereços permitidos do link de senha | Authentication > URL Configuration > Redirect URLs | Adicionar `http://localhost:8081/criar-nova-senha` (navegador) e `fgrcminicial://criar-nova-senha` (APK). No Expo Go o endereço começa com `exp://` e muda com o IP |
 | 7 | Verificação em duas etapas | Authentication > Multi-Factor | Conferir se **TOTP** está habilitado (vem ligado por padrão) |
+| 8 | ✅ Migrações e funções de 19/11 (exclusão definitiva e avisos por e-mail) | Feito em 19/11 (detalhes em `docs/melhorias-19-11-2026.md`, seção 4) | Exclusão definitiva e registro dos avisos funcionando no servidor |
+| 9 | Segredos do e-mail das funções | Edge Functions > Secrets. Lista em `docs/configurar-email-gmail-supabase.md`, Parte 7 | Os avisos "Solicitação de acesso recebida" e "aprovada". Porta **465** (as funções bloqueiam 25 e 587) |
 
 ## 2. Comandos para rodar no computador (VS Code, pasta `C:\Projetos\FRAMEWORK-FGRC-M-APP`)
 
@@ -36,7 +38,9 @@ A pasta `supabase/functions/aprovar-pedido` pode sair depois do item 1 da tabela
 ```powershell
 git rm -r supabase/functions/aprovar-pedido
 ```
-Novo APK (depois dos commits): `npx eas-cli build -p android --profile preview`.
+Também `npm run lint` (os testes de 19/11 não conseguiram rodar o lint nem o `tsc` completo fora do seu computador).
+
+Novo APK (depois dos commits): subir `version` para `1.3.0` e `versionCode` para `4` no `app.json` e rodar `npx eas-cli build -p android --profile preview`. O dono do projeto no Expo agora é `fgrc-m`.
 
 ## 3. Pendências técnicas
 
@@ -52,23 +56,25 @@ Novo APK (depois dos commits): `npx eas-cli build -p android --profile preview`.
 | Consulta da situação do pedido | Limitação conhecida | Quem souber um e-mail descobre se existe pedido e em que situação (não vê nenhum outro dado). Aceito para o MVP |
 | Senha provisória | Limitação conhecida | A administração vê a senha uma vez. O app obriga a troca no primeiro acesso |
 | Desativar conta | Limitação menor (versão 3 da função) | Bloqueia novos logins e apaga as sessões abertas (a renovação para na hora). O acesso que já tinha sido entregue ao celular ainda vale até vencer, no máximo 1 hora |
-| Link de acesso por e-mail (Magic Link) | Retirado da entrega | No Android o link era aceito, mas ia para o Site URL (`localhost`) e a sessão se perdia. Para voltar a usar: cadastrar um endereço de retorno do app (ex.: `fgrcminicial://entrar`) em Redirect URLs, mandar esse endereço no envio do código, criar a rota que recebe a sessão e decidir o que fazer quando o e-mail é aberto em outro aparelho. Até lá, só código de 6 números |
-| APK 1.0.0 já instalado | Limitação | Não tem a verificação de manutenção e versão mínima, então não pode ser bloqueado à distância. Pedir para atualizar manualmente |
-| Atualização pelo ar (EAS Update) | Não configurado | `expo-updates` não está instalado. Toda mudança exige APK novo. Se for configurar: `npx expo install expo-updates`, `eas update:configure`, definir `runtimeVersion` e gerar um APK novo antes de usar `eas update` (mudança nativa sempre exige APK) |
+| Link de acesso por e-mail (Magic Link) | Retirado da entrega | No Android o link era aceito, mas ia para o Site URL (`localhost`) e a sessão se perdia. Para voltar a usar: cadastrar um endereço de retorno do app (ex.: `fgrcminicial://entrar`) em Redirect URLs, mandar esse endereço no envio do código, criar a rota que recebe a sessão e decidir o que fazer quando o e-mail é aberto em outro aparelho. Até lá, só código (8 números) |
+| APKs antigos já instalados | Limitação | O 1.0.0 não tem a verificação de manutenção e versão mínima. Do 1.1.0 ao 1.2.0 a verificação existe, mas some sem internet. O bloqueio que continua sem internet só vale a partir do próximo APK. Pedir para atualizar manualmente (`docs/atualizacoes-e-eas-update.md`) |
+| Atualização pelo ar (EAS Update) | Não configurado (proposta pronta) | `expo-updates` não está instalado. Toda mudança exige APK novo. Passo a passo e cuidados em `docs/atualizacoes-e-eas-update.md` |
 | Pasta Download no Android 11+ | Limitação do Android | O seletor de pastas não deixa usar a raiz de Download; escolher ou criar uma subpasta (ex.: `Download/FGRC-M`) |
-| Aviso por e-mail quando a equipe responde o suporte | Não implementado | A resposta fica em Meus chamados. Mandar e-mail automático exigiria uma função no servidor com o SMTP |
+| Aviso por e-mail quando a equipe responde o suporte | Não implementado | A resposta fica em Meus chamados. Dá para aproveitar o envio dos avisos de pedido (`_shared/email-fgrcm.ts`) com um evento novo |
+| Avisos por e-mail de pedido recebido e aprovado | Publicado em 19/11; **falta cadastrar os segredos** | Sem os segredos (item 9 da seção 1) o aviso fica como "não configurado" e nada é enviado. Com Gmail, limite diário e risco de spam |
 | Meus chamados para mensagens sem login | Limitação | Mensagens enviadas pela tela de entrada não aparecem (não dá para provar de quem são); a resposta é por e-mail |
-| Excluir conta | Não implementado | Hoje: pedido pelo suporte e desativação pela administração |
+| Excluir conta | Publicado em 19/11 (falta reteste no app) | Exclusão definitiva pela administração (Contas > Excluir definitivamente). A pessoa ainda não pede sozinha: o pedido continua pelo suporte |
 | Posse do e-mail nos modos código e senha provisória | Limitação conhecida | O app não confirma sozinho que a pessoa é dona do e-mail; quem aprova deve mandar o código ou a senha pelo próprio e-mail da pessoa ou por um contato conhecido. No modo por e-mail o próprio e-mail confirma |
 | Lista de contas na administração | Limitação | Lê até 500 contas (suficiente para o MVP) |
 | Último login | Informação disponível | A aba Contas mostra a data do último login (Supabase Auth). Não existe registro de quem está usando o app agora |
 | Alertas do `npm audit` (36) | Para depois da entrega | Vêm de `picomatch` e `minimatch` nas ferramentas de build. **Não** usar `npm audit fix --force` (rebaixa o Expo). Plano em `auditoria-seguranca-e-dependencias.md`, seção 5 |
 | Domínios de e-mail aceitos no build | Decisão | O `eas.json` aceita `gov.br` e `gmail.com` para os testes. Numa implantação real, deixar só `gov.br` |
 | Campo Estado e trava de conta aprovada | Corrigido na 1.2.0 | Falta o reteste no Android (CT74, CT75, CT77, CT78) |
-| Tamanho do texto no celular | Parcial | A barrinha de tamanho do texto vale no app inteiro no navegador. No celular, ela vale nas telas que já usavam a escala (página inicial, Opções, Home, Configurações e outras dos integrantes); Login, pedido de acesso e telas de senha crescem só com a fonte do Android. Ajustar depois da entrega, tela por tela |
+| Tamanho do texto no celular | Corrigido em 19/11 | Todas as telas com letra de tamanho fixo acompanham a barrinha (`src/components/escala-texto.ts`). Falta conferir no Android em 150% |
 | Telas avulsas sem link | Visual | `/revisar-avaliacao`, `/avaliacao-finalizada`, `/editar-perfil` e `/alteracoes-salvas` continuam com cores fixas (não aparecem no app) |
 | Material de testes | Fora deste repositório | Fica na documentação da equipe até a revisão e a transferência para o repositório acadêmico |
 | Dependências do modelo sem uso | Para depois da entrega | `@expo/ui`, `expo-device`, `expo-glass-effect`, `expo-symbols`, `expo-web-browser`. Tirar com `npm uninstall` e gerar APK novo |
+| Lint: aviso `react-hooks/set-state-in-effect` | Aviso (não trava) | O `expo lint` foi configurado em 19/11 (`eslint.config.js`) e a regra nova do React reclama de `useEffect` que já começa mudando o estado. Ficou como aviso nas telas que carregam dados ao abrir: `meus-chamados.tsx`, `AbaContas.tsx`, `AbaSeguranca.tsx`, `AbaSistema.tsx`, `AbaSolicitacoes.tsx`, `AbaSuporte.tsx`, `AreaAdministrativa.tsx` e `PerfilScreen.tsx` (P09). Funciona certo; só desenha a tela uma vez a mais. Ajustar depois da entrega |
 | Erro "Requiring unknown module" no Expo | Desenvolvimento | Aparece quando os arquivos mudam com o Expo ligado. Reiniciar com `npx expo start -c` |
 
 ## 4. Decisões que dependem do grupo ou do orientador

@@ -2,6 +2,8 @@ import { useFgrcTheme } from '../../components/fgrc-colors';
 import { FgrcButton, Page } from '../../components/fgrc-ui';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { EIXOS_FGRC, TODAS_QUESTOES_FGRC } from './questionarioData';
+// [integração 19/11] escala do texto nas telas do celular
+import { useEstilosEscalados } from '@/components/escala-texto';
 
 type AvaliacoesScreenProps = {
   respostas: Record<string, number>;
@@ -14,6 +16,8 @@ export default function AvaliacoesScreen({
   onIniciarNova,
   onContinuar,
 }: AvaliacoesScreenProps) {
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   const { colors } = useFgrcTheme();
 
   const totalQuestoes = TODAS_QUESTOES_FGRC.length;
@@ -121,7 +125,7 @@ export default function AvaliacoesScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const estilosBase = StyleSheet.create({
   card: {
     borderRadius: 16,
     borderWidth: 1.25,
@@ -220,6 +224,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    // [integração 19/11] área de toque mínima de 48 (acessibilidade)
+    minHeight: 48,
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 12,

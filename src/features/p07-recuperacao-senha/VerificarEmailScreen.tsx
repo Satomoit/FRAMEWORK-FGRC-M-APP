@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useFgrcTheme } from '@/components/fgrc-colors';
 import { FgrcButton, Notice, OrangeLink, Page } from '@/components/fgrc-ui';
+// [integração 19/11] escala do texto nas telas do celular
+import { useEstilosEscalados } from '@/components/escala-texto';
 
 // a tela recebe o email e as funções dos botões de navegação
 type Props = {
@@ -17,6 +19,8 @@ type Props = {
 
 // essa é a tela 03 do protótipo (verifique seu email)
 export default function VerificarEmailScreen({ email, onBackToLogin, onEditEmail, resendReset, onOpenResetLink }: Props) {
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   // pega as cores do tema atual
   const { colors } = useFgrcTheme();
   // evita clicar em reenviar várias vezes ao mesmo tempo
@@ -83,7 +87,7 @@ export default function VerificarEmailScreen({ email, onBackToLogin, onEditEmail
 }
 
 // tamanhos e espaçamentos da tela de verificação
-const styles = StyleSheet.create({
+const estilosBase = StyleSheet.create({
   hero: { alignItems: 'center', paddingTop: 20 },
   mailCircle: { width: 76, height: 76, borderRadius: 38, justifyContent: 'center', alignItems: 'center', marginBottom: 23 },
   mailSymbol: { fontSize: 34, lineHeight: 43 },

@@ -44,3 +44,45 @@ export function situacaoDaVersao(instalada: string | null | undefined, cfg: Conf
   if (compararVersoes(instalada, cfg.versao_atual) === -1) return 'atualizacao_disponivel';
   return 'ok';
 }
+
+// ---------------------------------------------------------------------------------------------
+// [integração 19/11] bloqueio LEMBRADO da atualização obrigatória
+// problema: o bloqueio só acontecia quando o servidor respondia. Quem já tinha visto a tela de
+// "atualização obrigatória" podia desligar a internet, abrir o app de novo e continuar na versão velha
+// solução: quando o servidor diz que ESTA versão instalada é obrigatória de atualizar, o app guarda isso
+// no aparelho e continua bloqueando mesmo sem internet, até o servidor dizer o contrário
+// quem nunca viu o aviso (ficou offline o tempo todo) continua usando normalmente: as avaliações são
+// locais e o app não tem como saber de uma versão nova sem internet (esse é o limite real do offline)
+
+export type BloqueioLembrado = {
+  instalada: string;
+  minima: string;
+  maisNova: string | null;
+  url: string | null;
+  mensagem: string | null;
+};
+
+// vale só se foi guardado pra ESTA versão (depois de atualizar o app, o lembrete antigo não vale mais)
+// e se a versão instalada ainda é menor que a mínima guardada
+export function bloqueioLembradoVale(instalada: string | null | undefined, lembrado: BloqueioLembrado | null | undefined): boolean {
+  if (!lembrado || !lerVersao(instalada)) return false;
+  return lembrado.instalada === instalada && compararVersoes(instalada, lembrado.minima) === -1;
+}
+
+// lê o que tava guardado; qualquer coisa estranha vira null (aí não bloqueia ninguém por engano)
+export function lerBloqueioLembrado(texto: string | null | undefined): BloqueioLembrado | null {
+  try {
+    const d = JSON.parse(texto ?? 'null') as Partial<BloqueioLembrado> | null;
+    if (!d || !lerVersao(d.instalada) || !lerVersao(d.minima)) return null;
+    return {
+      instalada: d.instalada as string,
+      minima: d.minima as string,
+      maisNova: typeof d.maisNova === 'string' ? d.maisNova : null,
+      // só guarda link https (igual o banco e a consulta do sistema)
+      url: typeof d.url === 'string' && /^https:\/\/\S+$/.test(d.url) ? d.url : null,
+      mensagem: typeof d.mensagem === 'string' ? d.mensagem : null,
+    };
+  } catch {
+    return null;
+  }
+}

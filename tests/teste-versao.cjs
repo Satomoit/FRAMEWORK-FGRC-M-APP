@@ -24,3 +24,15 @@ ok(situacaoDaVersao('1.0.0', null) === 'ok', 'sem configuração (offline ou err
 ok(situacaoDaVersao('1.0.0', { versao_atual: 'x', versao_minima: 'y', obrigatoria: true }) === 'ok', 'configuração estragada não bloqueia');
 
 process.exitCode = f ? 1 : 0;
+
+// [integração 19/11] bloqueio lembrado (versão velha não escapa desligando a internet)
+const V = require(path.join((process.argv[2] || path.resolve(__dirname, '..')), 'src/lib/versao.ts'));
+const lembrado = { instalada: '1.2.0', minima: '1.3.0', maisNova: '1.3.0', url: 'https://exemplo.com/fgrc-m.apk', mensagem: null };
+ok(V.bloqueioLembradoVale('1.2.0', lembrado), 'viu o aviso obrigatório antes: continua bloqueando sem internet');
+ok(!V.bloqueioLembradoVale('1.3.0', lembrado), 'depois de atualizar pra 1.3.0, o lembrete antigo não bloqueia mais');
+ok(!V.bloqueioLembradoVale('1.2.0', null), 'sem lembrete guardado (nunca viu o aviso): não bloqueia offline');
+ok(!V.bloqueioLembradoVale('1.2.0', { ...lembrado, instalada: '1.1.0' }), 'lembrete de outra versão instalada não vale');
+ok(V.lerBloqueioLembrado(JSON.stringify(lembrado)).minima === '1.3.0', 'lê o lembrete guardado');
+ok(V.lerBloqueioLembrado('{quebrado') === null && V.lerBloqueioLembrado(JSON.stringify({ instalada: 'x', minima: '1.0.0' })) === null, 'lembrete estragado ou estranho: ignora (não bloqueia por engano)');
+ok(V.lerBloqueioLembrado(JSON.stringify({ ...lembrado, url: 'http://inseguro' })).url === null, 'link que não é https é descartado');
+process.exitCode = f ? 1 : 0;

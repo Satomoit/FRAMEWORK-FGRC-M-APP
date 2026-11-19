@@ -75,7 +75,7 @@ As avaliações ficam guardadas no navegador daquele celular. Se a pessoa limpar
    - no computador: `http://localhost:8081/admin` (ou o link da opção B + `/admin`);
    - no celular: página inicial > **Opções** (no rodapé) > **Área da administração**.
 4. Solicitações > abre o pedido > escolha um jeito:
-   - **Aprovar com código de ativação:** aparece um código de 6 números. Toque em **Enviar para a pessoa** (no celular abre o WhatsApp) ou **Copiar mensagem pronta** (no computador). O código vale por pouco tempo (1 hora).
+   - **Aprovar com código de ativação:** aparece um código de 8 números. Toque em **Enviar para a pessoa** (no celular abre o WhatsApp) ou **Copiar mensagem pronta** (no computador). O código vale por pouco tempo (1 hora).
    - **Aprovar com senha provisória:** aparece a senha. Mande do mesmo jeito. No primeiro acesso o app pede para criar uma senha nova.
    - **Aprovar e enviar código por e-mail:** só depois de configurar o Gmail (`docs/configurar-email-gmail-supabase.md`).
 5. O amigo:

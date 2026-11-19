@@ -13,10 +13,14 @@ import { FgrcButton, Notice } from '@/components/fgrc-ui';
 import { concluirCadastroMfa, fatoresVerificados, iniciarCadastroMfa } from '@/lib/admin';
 import { supabase } from '@/lib/supabase';
 import { Cartao, dataHora } from './ui-admin';
+// [integração 19/11] escala do texto nas telas do celular
+import { useEstilosEscalados } from '@/components/escala-texto';
 
 type Fator = Awaited<ReturnType<typeof fatoresVerificados>>[number];
 
 export default function AbaSeguranca() {
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   const { colors } = useFgrcTheme();
   const [fatores, setFatores] = useState<Fator[] | null>(null);
   const [cadastro, setCadastro] = useState<{ factorId: string; qrCode: string; chave: string } | null>(null);
@@ -100,11 +104,11 @@ export default function AbaSeguranca() {
             {removendo === f.id ? (
               <View style={styles.acoes}>
                 <Text style={{ color: colors.text }}>Remover? A área administrativa volta a pedir só a senha.</Text>
-                <FgrcButton label={ocupado ? 'Aguarde...' : 'Sim, remover'} variant="danger" disabled={ocupado} onPress={() => { void remover(f.id); }} />
+                <FgrcButton label={ocupado ? 'Aguarde...' : 'Sim, remover'} variant="dangerSolid" icon="trash-outline" disabled={ocupado} onPress={() => { void remover(f.id); }} />
                 <FgrcButton label="Cancelar" variant="outlined" onPress={() => setRemovendo(null)} />
               </View>
             ) : (
-              <FgrcButton label="Remover" variant="outlined" onPress={() => setRemovendo(f.id)} />
+              <FgrcButton label="Remover" variant="danger" icon="trash-outline" onPress={() => setRemovendo(f.id)} />
             )}
           </Cartao>
         ))
@@ -128,14 +132,14 @@ export default function AbaSeguranca() {
             style={[styles.codigo, { color: colors.text, borderColor: colors.border, backgroundColor: colors.input }]}
           />
           <View style={styles.acoes}>
-            <FgrcButton label={ocupado ? 'Conferindo...' : 'Ativar'} disabled={ocupado || codigo.length !== 6} onPress={() => { void concluir(); }} />
+            <FgrcButton label={ocupado ? 'Conferindo...' : 'Ativar'} variant="success" icon="shield-checkmark-outline" disabled={ocupado || codigo.length !== 6} onPress={() => { void concluir(); }} />
             <FgrcButton label="Cancelar" variant="outlined" onPress={() => setCadastro(null)} />
           </View>
         </Cartao>
       ) : (
         <View style={styles.acoes}>
           <Text style={{ color: colors.text }}>Ainda não ativada nesta conta.</Text>
-          <FgrcButton label={ocupado ? 'Aguarde...' : 'Ativar verificação em duas etapas'} disabled={ocupado} onPress={() => { void comecar(); }} />
+          <FgrcButton label={ocupado ? 'Aguarde...' : 'Ativar verificação em duas etapas'} variant="success" icon="shield-checkmark-outline" disabled={ocupado} onPress={() => { void comecar(); }} />
         </View>
       )}
 
@@ -147,7 +151,7 @@ export default function AbaSeguranca() {
   );
 }
 
-const styles = StyleSheet.create({
+const estilosBase = StyleSheet.create({
   carregando: { marginTop: 30 },
   titulo: { fontSize: 18, fontWeight: '700', marginBottom: 4 },
   texto: { fontSize: 14, lineHeight: 20, marginVertical: 8 },

@@ -13,11 +13,17 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { useFgrcTheme } from '@/components/fgrc-colors';
 import { FgrcButton, FormField, Notice, OrangeLink, Page } from '@/components/fgrc-ui';
+// [integração B12] tamanho do código num lugar só (o e-mail do Supabase manda 8 números)
+import { codigoNoFormatoCerto, descricaoDoCodigo, exemploDeCodigo, limparCodigo } from '@/lib/codigo-de-acesso';
 import { problemaNoEmailInstitucional } from '@/lib/email-institucional';
 import { REGRA_SENHA_TEXTO, oQueFaltaNaSenha } from '@/lib/politica-senha';
 import { supabase } from '@/lib/supabase';
+// [integração 19/11] escala do texto nas telas do celular
+import { useEstilosEscalados } from '@/components/escala-texto';
 
 export default function AtivarAcesso() {
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   const router = useRouter();
   const { colors } = useFgrcTheme();
   // 'codigo' = digitar e-mail e código | 'senha' = criar a senha (depois que o código deu certo)
@@ -43,12 +49,13 @@ export default function AtivarAcesso() {
     setErro('');
     setAviso('');
     const emailLimpo = email.trim().toLowerCase();
-    const codigoLimpo = codigo.replace(/\D/g, ''); // tira espaço e traço (fica só número)
+    const codigoLimpo = limparCodigo(codigo); // tira espaço e traço (fica só número)
 
     const problema = problemaNoEmailInstitucional(emailLimpo);
     if (problema) { setErro(problema); return; }
-    if (codigoLimpo.length < 6 || codigoLimpo.length > 10) {
-      setErro('Digite o código de 6 a 8 números que você recebeu.');
+    // [integração B12] o texto agora fala do tamanho real do código (antes dizia 6, mas chega com 8)
+    if (!codigoNoFormatoCerto(codigoLimpo)) {
+      setErro(`Digite o ${descricaoDoCodigo()} que você recebeu no e-mail.`);
       return;
     }
 
@@ -146,12 +153,12 @@ export default function AtivarAcesso() {
   return (
     <Page
       title="Ativar acesso"
-      subtitle="Quando a administração aprovar o seu pedido, você recebe um código de 6 números (por e-mail ou direto da administração). Digite o código aqui para criar sua senha. Não é preciso tocar em nenhum link do e-mail."
+      subtitle={`Quando a administração aprovar o seu pedido, você recebe um ${descricaoDoCodigo()} (por e-mail ou direto da administração). Digite o código aqui para criar sua senha. Não é preciso tocar em nenhum link do e-mail.`}
       onBack={voltar}
     >
       <View style={styles.bloco}>
         <FormField label="E-mail institucional" email value={email} onChangeText={v => { setEmail(v); setErro(''); }} placeholder="Digite o e-mail do pedido..." />
-        <FormField label="Código de ativação" value={codigo} onChangeText={v => { setCodigo(v); setErro(''); }} placeholder="Ex: 123456" />
+        <FormField label="Código de ativação" value={codigo} onChangeText={v => { setCodigo(v); setErro(''); }} placeholder={`Ex: ${exemploDeCodigo()}`} />
         {erro ? <Notice message={erro} kind="error" /> : null}
         {aviso ? <Notice message={aviso} kind="success" onClose={() => setAviso('')} /> : null}
         <FgrcButton label={ocupado ? 'Aguarde...' : 'Confirmar código'} disabled={ocupado} onPress={() => { void confirmarCodigo(); }} />
@@ -163,7 +170,7 @@ export default function AtivarAcesso() {
   );
 }
 
-const styles = StyleSheet.create({
+const estilosBase = StyleSheet.create({
   bloco: { marginTop: 16, gap: 4 },
   dica: { fontSize: 13, lineHeight: 19, marginBottom: 10 },
 });

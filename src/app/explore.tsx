@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 
@@ -13,12 +13,28 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useCorDoTema, type CorDoTema } from "@/components/cor-do-tema";
+// [integração 19/11] resultado do e-mail de confirmação do pedido
+import { pegarResultadoDoAviso } from "@/lib/aviso-pedido-recebido";
+// [integração 19/11] escala do texto nas telas do celular
+import { useEstilosEscalados } from '@/components/escala-texto';
 
 export default function SolicitacaoEnviada() {
   // [tema] cores que seguem o tema escolhido (Configurações ou Opções da página inicial)
   const { cor, escuro } = useCorDoTema();
-  const styles = useMemo(() => criarEstilos(cor), [cor]);
+  const estilosBase = useMemo(() => criarEstilos(cor), [cor]);
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   const router = useRouter();
+  // [integração 19/11] null = ainda esperando (ou não teve pedido agora); "enviado" só quando o servidor confirmou
+  const [avisoEnviado, setAvisoEnviado] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const promessa = pegarResultadoDoAviso();
+    if (!promessa) return;
+    let ativo = true;
+    promessa.then(r => { if (ativo) setAvisoEnviado(r === "enviado"); });
+    return () => { ativo = false; };
+  }, []);
 
   const voltarLogin = () => {
     router.replace("/");
@@ -46,6 +62,13 @@ export default function SolicitacaoEnviada() {
             Você receberá uma atualização no e-mail informado quando sua
             solicitação for avaliada.
           </Text>
+
+          {/* [integração 19/11] só aparece quando o e-mail de confirmação saiu de verdade */}
+          {avisoEnviado ? (
+            <Text style={styles.description} accessibilityLiveRegion="polite">
+              Enviamos uma confirmação para o seu e-mail. Se não encontrar, veja também a pasta de spam.
+            </Text>
+          ) : null}
 
           {/* Cartão de status */}
           <View style={styles.statusCard}>

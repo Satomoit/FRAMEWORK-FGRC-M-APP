@@ -9,8 +9,12 @@ import { listarAvaliacoes } from '@/lib/avaliacoes-reais';
 import { paraResultado } from '@/lib/calcular-relatorio';
 import { trazerDadosAntigosParaConta, verificarDadosAntigos } from '@/lib/armazenamento-local';
 import { useFgrcTheme } from '@/components/fgrc-colors';
+// [integração 19/11] escala do texto nas telas do celular
+import { useEstilosEscalados } from '@/components/escala-texto';
 
 export default function ResultadosRevisao() {
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   const router = useRouter();
   // [integração] cores do tema (antes o aviso e o erro eram sempre claros, até no modo escuro)
   const { colors } = useFgrcTheme();
@@ -82,7 +86,7 @@ export default function ResultadosRevisao() {
     )}
   </View>;
 }
-const styles = StyleSheet.create({
+const estilosBase = StyleSheet.create({
   raiz: { flex: 1 },
   erro: { padding: 12, color: '#B42318' },
   antigas: { margin: 12, padding: 12, borderRadius: 12, backgroundColor: '#E8F0F8', gap: 8 },

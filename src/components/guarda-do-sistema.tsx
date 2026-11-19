@@ -8,6 +8,12 @@
 // /admin e /suporte nunca são bloqueadas: a administração precisa conseguir desligar a manutenção
 // (ou corrigir uma versão mínima errada) e a pessoa precisa conseguir pedir ajuda
 // as telas de baixo continuam montadas (só ficam escondidas), então ninguém perde o que tava fazendo
+// [integração 19/11] revisão do sistema de atualização:
+//   * a atualização obrigatória que o servidor já mostrou fica LEMBRADA no aparelho e continua bloqueando
+//     sem internet (antes dava pra escapar desligando a internet); quem nunca viu o aviso usa offline normal
+//   * confere de novo de tempos em tempos com o app aberto (a cada 2 min sem conexão, a cada 30 min com)
+//   * a tela de atualização obrigatória agora explica o passo a passo da instalação do APK no Android
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { usePathname, useRouter, type Href } from 'expo-router';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { AppState, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -16,7 +22,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFgrcTheme } from '@/components/fgrc-colors';
 import { FgrcButton, Notice, OrangeLink, Page } from '@/components/fgrc-ui';
 import { dataHoraDa } from '@/lib/datas';
-import { consultarSistema, type EstadoDoSistema } from '@/lib/sistema';
+import { consultarSistema, versaoInstalada, type EstadoDoSistema } from '@/lib/sistema';
+import { bloqueioLembradoVale, lerBloqueioLembrado, type BloqueioLembrado } from '@/lib/versao';
+// [integração 19/11] escala do texto nas telas do celular
+import { useEstilosEscalados } from '@/components/escala-texto';
+
+// [integração 19/11] onde fica guardado o bloqueio lembrado (só neste aparelho)
+const CHAVE_BLOQUEIO = 'fgrcm:sistema:bloqueio-versao:v1';
+// [integração 19/11] de quanto em quanto tempo confere de novo com o app aberto
+const RECONFERIR_COM_CONEXAO_MS = 30 * 60_000;
+const RECONFERIR_SEM_CONEXAO_MS = 2 * 60_000;
 
 // rotas que abrem mesmo com bloqueio (começo do caminho)
 const ROTAS_LIVRES = ['/admin', '/suporte'];
@@ -32,6 +47,8 @@ function marcarRecarga(versao: string) {
 }
 
 export function GuardaDoSistema({ children }: { children: ReactNode }) {
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   const caminho = usePathname();
   const router = useRouter();
   const [estado, setEstado] = useState<EstadoDoSistema | null>(null);
@@ -41,6 +58,13 @@ export function GuardaDoSistema({ children }: { children: ReactNode }) {
   const [motivoAtualizar, setMotivoAtualizar] = useState('');
   const ultimaConsulta = useRef(0);
   const emAndamento = useRef(false);
+  // [integração 19/11] bloqueio obrigatório que o servidor já mostrou pra esta versão (vale offline)
+  const [lembrado, setLembrado] = useState<BloqueioLembrado | null>(null);
+
+  useEffect(() => {
+    // lê assim que abre: se tinha bloqueio guardado pra esta versão, já bloqueia antes da internet responder
+    AsyncStorage.getItem(CHAVE_BLOQUEIO).then(t => setLembrado(lerBloqueioLembrado(t))).catch(() => {});
+  }, []);
 
   // pergunta pro servidor (forcar = botão "Tentar de novo", que ignora o intervalo de 1 minuto)
   const conferir = useCallback(async (forcar = false) => {
@@ -51,7 +75,19 @@ export function GuardaDoSistema({ children }: { children: ReactNode }) {
     ultimaConsulta.current = agora;
     setConferindo(true);
     try {
-      setEstado(await consultarSistema());
+      const novo = await consultarSistema();
+      setEstado(novo);
+      // [integração 19/11] só o servidor respondendo pode criar ou apagar o bloqueio lembrado
+      if (novo.conexao === 'ok') {
+        if (novo.versao.situacao === 'atualizacao_obrigatoria' && novo.versao.instalada && novo.versao.minima) {
+          const l: BloqueioLembrado = { instalada: novo.versao.instalada, minima: novo.versao.minima, maisNova: novo.versao.maisNova, url: novo.versao.url, mensagem: novo.versao.mensagem };
+          setLembrado(l);
+          AsyncStorage.setItem(CHAVE_BLOQUEIO, JSON.stringify(l)).catch(() => {});
+        } else {
+          setLembrado(null);
+          AsyncStorage.removeItem(CHAVE_BLOQUEIO).catch(() => {});
+        }
+      }
     } finally {
       emAndamento.current = false;
       setConferindo(false);
@@ -79,12 +115,32 @@ export function GuardaDoSistema({ children }: { children: ReactNode }) {
     };
   }, [conferir]);
 
+  // [integração 19/11] confere de novo de tempos em tempos enquanto o app ta aberto na frente
+  // (antes: se abriu sem internet e a internet voltou, só conferia quando o app ia e voltava do fundo)
+  const semConexao = !estado || estado.conexao !== 'ok';
+  useEffect(() => {
+    const relogio = setInterval(() => {
+      if (AppState.currentState === 'active') void conferir();
+    }, semConexao ? RECONFERIR_SEM_CONEXAO_MS : RECONFERIR_COM_CONEXAO_MS);
+    return () => clearInterval(relogio);
+  }, [conferir, semConexao]);
+
+  // [integração 19/11] sem resposta do servidor, usa o bloqueio lembrado (se for desta versão)
+  const usarLembrado = semConexao && lembrado !== null && bloqueioLembradoVale(versaoInstalada(), lembrado);
+  const estadoDaTela: EstadoDoSistema | null = usarLembrado && lembrado
+    ? {
+        conexao: estado?.conexao ?? 'sem_conexao',
+        manutencao: null,
+        versao: { situacao: 'atualizacao_obrigatoria', instalada: lembrado.instalada, maisNova: lembrado.maisNova, minima: lembrado.minima, url: lembrado.url, mensagem: lembrado.mensagem, notas: null },
+      }
+    : estado;
+
   const livre = ROTAS_LIVRES.some((r) => caminho === r || caminho.startsWith(`${r}/`));
-  const bloqueio = livre || !estado
+  const bloqueio = livre || !estadoDaTela
     ? null
-    : estado.versao.situacao === 'atualizacao_obrigatoria'
+    : estadoDaTela.versao.situacao === 'atualizacao_obrigatoria'
       ? 'versao'
-      : estado.manutencao
+      : estadoDaTela.manutencao
         ? 'manutencao'
         : null;
 
@@ -111,8 +167,8 @@ export function GuardaDoSistema({ children }: { children: ReactNode }) {
         {children}
       </View>
 
-      {bloqueio === 'versao' && estado ? (
-        <TelaAtualizacao estado={estado} conferindo={conferindo} onTentar={() => { void conferir(true); }}
+      {bloqueio === 'versao' && estadoDaTela ? (
+        <TelaAtualizacao estado={estadoDaTela} conferindo={conferindo} onTentar={() => { void conferir(true); }}
           onSuporte={() => router.push('/suporte' as Href)} />
       ) : null}
       {bloqueio === 'manutencao' && estado ? (
@@ -167,6 +223,8 @@ function TelaAtualizacao({ estado, conferindo, onTentar, onSuporte }: {
   onTentar: () => void;
   onSuporte: () => void;
 }) {
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   const { colors } = useFgrcTheme();
   const [aviso, setAviso] = useState('');
   const v = estado.versao;
@@ -185,14 +243,27 @@ function TelaAtualizacao({ estado, conferindo, onTentar, onSuporte }: {
             <Text style={[styles.detalhe, { color: colors.text }]}>{v.notas}</Text>
           </View>
         ) : null}
+        {/* [integração 19/11] sem internet (bloqueio lembrado): avisa que pra baixar precisa de conexão */}
+        {estado.conexao !== 'ok' ? (
+          <Notice kind="info" message="Você está sem internet agora. Para baixar a versão nova, conecte o celular à internet (de preferência pelo Wi-Fi)." />
+        ) : null}
         {/* aviso importante pra ninguém ter medo de perder o que fez */}
-        <Text style={[styles.detalhe, { color: colors.muted }]}>
-          {Platform.OS === 'web'
-            ? 'As avaliações salvas neste navegador continuam guardadas depois de atualizar.'
-            : 'Instale a versão nova por cima desta (sem desinstalar). Assim as avaliações salvas neste celular continuam guardadas.'}
-        </Text>
+        {Platform.OS === 'web' ? (
+          <Text style={[styles.detalhe, { color: colors.muted }]}>
+            As avaliações salvas neste navegador continuam guardadas depois de atualizar.
+          </Text>
+        ) : (
+          // [integração 19/11] passo a passo da instalação do APK (o app não fica na loja, então o Android pergunta umas coisas)
+          <View style={[styles.caixa, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+            <Text style={[styles.rotulo, { color: colors.text }]}>Como atualizar</Text>
+            <Text style={[styles.detalhe, { color: colors.text }]}>1. Toque em “Baixar a versão nova”. Abre a página do arquivo de instalação do FGRC-M.</Text>
+            <Text style={[styles.detalhe, { color: colors.text }]}>2. Baixe o arquivo e abra quando terminar. Se o Android pedir, permita instalar apps desta fonte (vale só para este arquivo).</Text>
+            <Text style={[styles.detalhe, { color: colors.text }]}>3. Toque em “Atualizar”. Não desinstale o FGRC-M antes: assim as avaliações salvas neste celular continuam guardadas.</Text>
+            <Text style={[styles.detalhe, { color: colors.text }]}>4. Abra o FGRC-M de novo.</Text>
+          </View>
+        )}
         <View style={styles.botoes}>
-          <FgrcButton label="Atualizar agora" onPress={() => { void atualizarAgora(estado).then((t) => setAviso(t ?? '')); }} />
+          <FgrcButton label={Platform.OS === 'web' ? 'Atualizar agora' : 'Baixar a versão nova'} onPress={() => { void atualizarAgora(estado).then((t) => setAviso(t ?? '')); }} />
           <FgrcButton label={conferindo ? 'Conferindo...' : 'Tentar de novo'} variant="outlined" disabled={conferindo} onPress={onTentar} />
           <OrangeLink label="Falar com o suporte" onPress={onSuporte} />
         </View>
@@ -209,6 +280,8 @@ function TelaManutencao({ estado, conferindo, onTentar, onSuporte, onAdmin }: {
   onSuporte: () => void;
   onAdmin: () => void;
 }) {
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   const { colors } = useFgrcTheme();
   const m = estado.manutencao;
   // a previsão só aparece se a administração cadastrou uma (não inventa horário)
@@ -245,6 +318,8 @@ function FaixaDeAviso({ texto, tipo, acao, onAcao, onFechar }: {
   onAcao: () => void;
   onFechar: () => void;
 }) {
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   const { colors } = useFgrcTheme();
   // desce a faixa pra baixo da barra de status do celular (hora, bateria)
   const margens = useSafeAreaInsets();
@@ -266,7 +341,7 @@ function FaixaDeAviso({ texto, tipo, acao, onAcao, onFechar }: {
   );
 }
 
-const styles = StyleSheet.create({
+const estilosBase = StyleSheet.create({
   raiz: { flex: 1 },
   escondida: { display: 'none' },
   // cobre a tela inteira (o absoluteFillObject saiu do React Native 0.88, por isso escrito por extenso)

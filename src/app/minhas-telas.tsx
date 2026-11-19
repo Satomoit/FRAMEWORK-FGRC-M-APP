@@ -8,12 +8,16 @@ import MenuMaisScreen from '@/features/p09-menu-perfil/MenuMaisScreen';
 import PerfilScreen, { DEMO_PROFILE, type ProfileData } from '@/features/p09-menu-perfil/PerfilScreen';
 import RecuperarSenhaScreen from '@/features/p07-recuperacao-senha/RecuperarSenhaScreen';
 import VerificarEmailScreen from '@/features/p07-recuperacao-senha/VerificarEmailScreen';
+// [integração 19/11] escala do texto nas telas do celular
+import { useEstilosEscalados } from '@/components/escala-texto';
 
 // só permite essas quatro telas (assim não aparece nenhuma tela dos outros)
 type Screen = 'mais' | 'perfil' | 'recuperar' | 'verificar';
 
 // essa rota junta somente P07 e P09 (é um lugar temporário pra vc testar)
 export default function MinhasTelas() {
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   // começa na tela Mais e muda quando vc clica nos botões
   const [screen, setScreen] = useState<Screen>('mais');
   // guarda o email digitado na recuperação de senha
@@ -99,7 +103,7 @@ export default function MinhasTelas() {
 }
 
 // esses estilos controlam tamanho e espaçamento (não mudam a lógica)
-const styles = StyleSheet.create({
+const estilosBase = StyleSheet.create({
   root: { flex: 1 },
   // essa borda e espaçamento deixam a faixa de teste separada do conteúdo
   previewHeader: { borderBottomWidth: 1, paddingBottom: 15, paddingHorizontal: 16 },

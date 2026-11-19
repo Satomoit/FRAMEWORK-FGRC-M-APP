@@ -3,6 +3,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useFgrcTheme } from "../../components/fgrc-colors";
 import { FgrcButton, Notice, Page } from "../../components/fgrc-ui";
 import { EIXOS_FGRC, TODAS_QUESTOES_FGRC } from "./questionarioData";
+// [integração 19/11] escala do texto nas telas do celular
+import { useEstilosEscalados } from '@/components/escala-texto';
 
 type QuestionarioScreenProps = {
   respostas: Record<string, number>;
@@ -24,6 +26,8 @@ export default function QuestionarioScreen({
   onVoltarHome,
   onVerResultados,
 }: QuestionarioScreenProps) {
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   const { colors } = useFgrcTheme();
 
   const indiceInicial = TODAS_QUESTOES_FGRC.findIndex(
@@ -234,6 +238,9 @@ export default function QuestionarioScreen({
         <View style={styles.revisaoActions}>
           <FgrcButton
             label="Finalizar avaliação"
+            // [integração 19/11] verde = concluir (fica mais fácil de entender que é o passo final)
+            variant="success"
+            icon="checkmark-circle-outline"
             // só libera o botão quando todas as questões tiverem resposta
             disabled={pendentes.length > 0}
             onPress={async () => {
@@ -433,7 +440,7 @@ export default function QuestionarioScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const estilosBase = StyleSheet.create({
   eixosTabs: {
     gap: 8,
     paddingBottom: 14,

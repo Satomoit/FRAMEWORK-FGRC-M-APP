@@ -17,7 +17,7 @@ A atualização obrigatória compara só a versão técnica (`Constants.expoConf
 - Login mais simples; o tema escolhido vale em todas as telas.
 - Pedido de acesso: o campo **Estado** abre uma lista com os 27 estados e o formulário sobe junto com o teclado.
 - Relatórios: **Baixar PDF** (escolhendo a pasta), **Abrir** e **Compartilhar**, com nome padrão `FGRC-M_Avaliacao_AAAA-MM-DD_XXXXXX.pdf`.
-- Ativação da conta só por código de 6 números; **Meus chamados** em Mais; avisos de manutenção e de versão nova.
+- Ativação da conta só por código (o texto dizia 6 números, mas o Supabase manda 8; corrigido em 19/11, ver `melhorias-19-11-2026.md`); **Meus chamados** em Mais; avisos de manutenção e de versão nova.
 - Só entram contas aprovadas pela equipe.
 
 **Importante:** instale **por cima** da versão anterior (não desinstale antes). Assim as avaliações salvas no celular continuam.

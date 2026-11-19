@@ -1,6 +1,8 @@
 import { useRouter, type Href } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+// [integração 19/11] escala do texto nas telas do celular
+import { useEstilosEscalados } from '@/components/escala-texto';
 
 // atalhos só pra conferir as telas que o grupo ja criou
 // as páginas de P05/P06 usam os exemplos que vieram no código da Aline
@@ -20,6 +22,8 @@ const rotas = [
 
 // essa página aparece só quando EXPO_PUBLIC_PREVIEW_MODE=true
 export default function RevisaoLocal() {
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   const router = useRouter();
   const escuro = useColorScheme() === 'dark';
   const fundo = escuro ? '#101827' : '#F4F7FC';
@@ -55,7 +59,7 @@ export default function RevisaoLocal() {
   );
 }
 
-const styles = StyleSheet.create({
+const estilosBase = StyleSheet.create({
   raiz: { flex: 1 },
   conteudo: { width: '100%', maxWidth: 660, alignSelf: 'center', padding: 24, paddingBottom: 60 },
   titulo: { fontSize: 25, fontWeight: '800', marginBottom: 15 },

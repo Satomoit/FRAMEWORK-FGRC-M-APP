@@ -16,6 +16,8 @@ import { usePreferencias } from '@/features/p11-configuracoes/PreferenciasProvid
 import { supabase } from '@/lib/supabase';
 // [integração B1b] junta os dados reais da Home (rascunho, histórico e prefeitura da conta)
 import { carregarResumoInicio } from '@/lib/resumo-inicio';
+// [integração B13] singular/plural certinho ("1 ponto de atenção")
+import { contagem } from '@/lib/textos';
 // [integração] mini tutorial (primeira vez pergunta se quer ver; depois abre pelo "Como usar")
 import TutorialInicial, { useTutorial } from '@/features/integracao/TutorialInicial';
 
@@ -236,7 +238,12 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.page}>
+      {/* [integração 19/11] com o tutorial aberto, o leitor de tela lê só o cartão do tutorial */}
+      <View
+        style={styles.page}
+        importantForAccessibility={tutorial.aberto ? 'no-hide-descendants' : 'auto'}
+        accessibilityElementsHidden={tutorial.aberto}
+      >
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
@@ -329,7 +336,7 @@ export default function HomeScreen() {
               Prioridades:{' '}
               {dados.quantidadePrioridades === null
                 ? '—'
-                : `${dados.quantidadePrioridades} pontos de atenção`}
+                : contagem(dados.quantidadePrioridades, 'ponto de atenção', 'pontos de atenção') /* [integração B13] "1 ponto", "2 pontos" */}
             </Text>
           </View>
 
@@ -427,7 +434,8 @@ export default function HomeScreen() {
           </View>
 
           {/* [integração] ajuda sempre à vista: tutorial de novo e falar com o suporte */}
-          <View style={[styles.quickRow, { marginTop: 12 }]}>
+          {/* [integração 19/11] ref = o tutorial guiado consegue iluminar essa parte (collapsable pro Android não sumir com a View) */}
+          <View ref={tutorial.alvo('inicio:ajuda')} collapsable={false} style={[styles.quickRow, { marginTop: 12 }]}>
             <Pressable
               accessibilityRole="button"
               style={({ pressed }) => [
@@ -462,12 +470,6 @@ export default function HomeScreen() {
           </View>
         </ScrollView>
 
-        <TutorialInicial
-          aberto={tutorial.aberto}
-          perguntar={tutorial.perguntar}
-          onFechar={tutorial.fechar}
-        />
-
         <View style={styles.bottomBar}>
           {itensMenu.map((item) => {
             const selecionado = item.nome === 'Início';
@@ -475,6 +477,8 @@ export default function HomeScreen() {
             return (
               <Pressable
                 key={item.nome}
+                // [integração 19/11] o tutorial guiado ilumina esse botão (ex: 'aba:Avaliações')
+                ref={tutorial.alvo(`aba:${item.nome}`)}
                 accessibilityRole="button"
                 accessibilityLabel={item.nome}
                 accessibilityState={{ selected: selecionado }}
@@ -503,6 +507,14 @@ export default function HomeScreen() {
           })}
         </View>
       </View>
+
+      {/* [integração 19/11] tutorial guiado: fica por cima da tela inteira (inclusive do menu de baixo) */}
+      <TutorialInicial
+        aberto={tutorial.aberto}
+        perguntar={tutorial.perguntar}
+        onFechar={tutorial.fechar}
+        alvos={tutorial.alvos}
+      />
 
       <Modal
         visible={maisAberto}

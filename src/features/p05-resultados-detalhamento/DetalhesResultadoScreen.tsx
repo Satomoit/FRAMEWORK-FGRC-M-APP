@@ -6,6 +6,8 @@ import { ClassificationBadge } from './components/ClassificationBadge';
 import { ProgressBar } from './components/ProgressBar';
 import { radius, useCoresP05, type CoresP05 } from './theme';
 import { AssessmentResult } from './types';
+// [integração 19/11] escala do texto nas telas do celular
+import { useEstilosEscalados } from '@/components/escala-texto';
 
 interface Props {
   result: AssessmentResult;
@@ -16,7 +18,9 @@ interface Props {
 export function DetalhesResultadoScreen({ result, onBack, onOpenReport }: Props) {
   // [integração] cores seguem o tema do app (claro, escuro e alto contraste das Configurações)
   const colors = useCoresP05();
-  const styles = useMemo(() => criarEstilos(colors), [colors]);
+  const estilosBase = useMemo(() => criarEstilos(colors), [colors]);
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   const [showAll, setShowAll] = useState(false);
   const dimensions = showAll ? result.dimensions : result.dimensions.slice(0, 3);
 
@@ -119,7 +123,8 @@ const criarEstilos = (colors: CoresP05) => StyleSheet.create({
   dimension: { marginBottom: 14 },
   dimName: { fontSize: 16, color: colors.text, marginBottom: 6 },
   dimScore: { fontSize: 13, fontWeight: '700', color: colors.primary },
-  toggle: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  // [integração 19/11] minHeight 48 = área de toque mínima pro "Ver todas as dimensões"
+  toggle: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 48 },
   link: { fontSize: 16, fontWeight: '600', color: colors.primary },
   divider: { height: 1, backgroundColor: colors.divider, marginVertical: 12 },
   pointRow: { flexDirection: 'row', alignItems: 'center' },

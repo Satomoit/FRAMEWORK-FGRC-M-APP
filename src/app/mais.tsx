@@ -2,18 +2,24 @@
 // usa as telas da P09 sem mudar nada nelas, só passa os dados e as funções certas
 // (a /minhas-telas continua existindo como página de teste, mas a barra não aponta mais pra ela)
 import type { User } from '@supabase/supabase-js';
-import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { useFgrcTheme } from '@/components/fgrc-colors';
 import MenuMaisScreen from '@/features/p09-menu-perfil/MenuMaisScreen';
 import PerfilScreen, { type ProfileData } from '@/features/p09-menu-perfil/PerfilScreen';
+// [integração 19/11] atalho da administração (o banco diz se a conta é admin)
+import { mostraAtalhoDaAdministracao } from '@/lib/admin';
+// [integração 19/11] lembra se a conta é da administração (o atalho aparece na hora)
+import { conferirEGuardarEstadoDoAtalho, esquecerEstadoDoAtalho, estadoDoAtalhoGuardado, estadoDoAtalhoNaMemoria } from '@/lib/atalho-admin';
 import { SEM_DADO, dadosDaConta } from '@/lib/conta';
 import { problemaNoEmailInstitucional } from '@/lib/email-institucional';
 import { plataformaDoApp, versaoInstalada } from '@/lib/sistema';
 import { NOME_DA_VERSAO } from '@/lib/versao';
 import { supabase } from '@/lib/supabase';
+// [integração 19/11] escala do texto nas telas do celular
+import { useEstilosEscalados } from '@/components/escala-texto';
 
 // monta o perfil que a P09 espera a partir do usuário logado
 // [integração] agora lê pelo src/lib/conta.ts (prefeitura/município/estado vêm do que a administração gravou)
@@ -60,6 +66,8 @@ async function salvarPerfilNoSupabase(anterior: ProfileData, novo: ProfileData):
 }
 
 export default function Mais() {
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   const { colors } = useFgrcTheme();
   const router = useRouter();
   // ?tela=perfil vem da Home (Meu perfil) pra abrir o perfil direto
@@ -67,11 +75,43 @@ export default function Mais() {
   const [mostrarPerfil, setMostrarPerfil] = useState(tela === 'perfil');
   const [perfil, setPerfil] = useState<ProfileData | null>(null);
   const [erro, setErro] = useState('');
+  // [integração 19/11] 'ok' ou 'precisa_mfa' = mostra o atalho; null = ainda não sabe ou não é admin
+  // já começa com o último resultado conhecido (antes começava vazio e o botão aparecia uns segundos depois)
+  const [estadoAdmin, setEstadoAdmin] = useState<string | null>(() => estadoDoAtalhoNaMemoria());
+
+  // toda vez que o menu volta pra frente (ex: voltou da /admin ou mudou a permissão):
+  // 1. mostra na hora o que ta guardado no aparelho pra esta conta
+  // 2. confere no banco por trás e atualiza se mudou
+  // sem internet o botão continua como tava (quem confere de verdade é a /admin, então não abre nada indevido)
+  const conferirAdmin = useCallback(() => {
+    let ativo = true;
+    void (async () => {
+      const guardado = await estadoDoAtalhoGuardado();
+      if (ativo && guardado) setEstadoAdmin(guardado);
+      const doBanco = await conferirEGuardarEstadoDoAtalho();
+      if (ativo) setEstadoAdmin(doBanco);
+    })();
+    return () => { ativo = false; };
+  }, []);
+  useFocusEffect(conferirAdmin);
+
+  // se a sessão mudar (entrou com o código das duas etapas, trocou de conta, saiu), confere de novo
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((evento) => {
+      if (evento === 'SIGNED_OUT') { esquecerEstadoDoAtalho(); setEstadoAdmin(null); }
+      else if (evento === 'MFA_CHALLENGE_VERIFIED' || evento === 'TOKEN_REFRESHED' || evento === 'SIGNED_IN' || evento === 'USER_UPDATED') conferirAdmin();
+    });
+    return () => data.subscription.unsubscribe();
+  }, [conferirAdmin]);
 
   // se vc pedir o perfil de novo com essa tela já aberta, atualiza
-  useEffect(() => {
+  // [integração 19/11] feito no desenho em vez de useEffect (jeito recomendado pelo React; o lint reclamava)
+  // (na primeira vez o useState lá de cima já começa com o perfil aberto se tela = perfil)
+  const [telaAntes, setTelaAntes] = useState(tela);
+  if (tela !== telaAntes) {
+    setTelaAntes(tela);
     if (tela === 'perfil') setMostrarPerfil(true);
-  }, [tela]);
+  }
 
   useEffect(() => {
     let ativo = true;
@@ -149,6 +189,10 @@ export default function Mais() {
         onOpenSupport={() => router.push('/suporte' as Href)}
         // [suporte] acompanhar as mensagens enviadas e as respostas da equipe
         onOpenTickets={() => router.push('/meus-chamados' as Href)}
+        // [integração 19/11] só pra conta da administração: abre a /admin com a MESMA sessão (não pede login de novo)
+        // se a verificação em duas etapas estiver ligada e a sessão ainda não passou pelo código, a /admin pede o código
+        onOpenAdmin={mostraAtalhoDaAdministracao(estadoAdmin) ? () => router.push('/admin' as Href) : undefined}
+        adminSubtitle={estadoAdmin === 'precisa_mfa' ? 'Pede o código da verificação em duas etapas' : 'Pedidos de acesso, suporte e contas'}
         // [integração] a Administração saiu daqui de propósito: agora é uma área separada (rota /admin)
         onSignOut={sair}
       />
@@ -162,7 +206,7 @@ export default function Mais() {
   );
 }
 
-const styles = StyleSheet.create({
+const estilosBase = StyleSheet.create({
   raiz: { flex: 1 },
   centro: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   erro: { fontSize: 14, padding: 12, textAlign: 'center' },

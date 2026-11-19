@@ -23,6 +23,9 @@ export const fgrcPalettes = {
     success: "#18764B",
     infoBackground: "#E8F0F8",
     input: "#FFFFFF",
+    // [integração 19/11] cor do texto em cima dos botões verdes e vermelhos (contraste acima de 4,5:1)
+    successOnButton: "#FFFFFF",
+    dangerOnButton: "#FFFFFF",
   },
   // cores do modo escuro (fundo escuro e texto claro)
   dark: {
@@ -42,6 +45,9 @@ export const fgrcPalettes = {
     success: "#7AD6A6",
     infoBackground: "#243B56",
     input: "#18283D",
+    // [integração 19/11] no escuro o verde e o vermelho são claros, então o texto em cima é escuro
+    successOnButton: "#06281A",
+    dangerOnButton: "#2B0503",
   },
 } as const;
 

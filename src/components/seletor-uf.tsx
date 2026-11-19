@@ -9,6 +9,8 @@ import { FlatList, Keyboard, Modal, Pressable, StyleSheet, Text, View, type Styl
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useCorDoTema, type CorDoTema } from '@/components/cor-do-tema';
+// [integração 19/11] escala do texto nas telas do celular
+import { useEstilosEscalados } from '@/components/escala-texto';
 
 export const ESTADOS_BR: { sigla: string; nome: string }[] = [
   { sigla: 'AC', nome: 'Acre' }, { sigla: 'AL', nome: 'Alagoas' }, { sigla: 'AP', nome: 'Amapá' },
@@ -35,7 +37,9 @@ type Props = {
 export function SeletorDeEstado({ valor, onChange, estiloCampo, estiloTexto, corPlaceholder = '#65758B', desabilitado }: Props) {
   // [tema] cores que seguem o tema escolhido (Configurações ou Opções da página inicial)
   const { cor } = useCorDoTema();
-  const styles = useMemo(() => criarEstilos(cor), [cor]);
+  const estilosBase = useMemo(() => criarEstilos(cor), [cor]);
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   const [aberto, setAberto] = useState(false);
   const margens = useSafeAreaInsets();
   const escolhido = ESTADOS_BR.find((e) => e.sigla === valor);

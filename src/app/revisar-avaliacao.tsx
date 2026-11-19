@@ -10,8 +10,12 @@ import {
 } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
+// [integração 19/11] escala do texto nas telas do celular
+import { useEstilosEscalados } from '@/components/escala-texto';
 
 export default function RevisarAvaliacao() {
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   const router = useRouter();
 
   // Quantidade de questões pendentes.
@@ -148,7 +152,7 @@ export default function RevisarAvaliacao() {
   );
 }
 
-const styles = StyleSheet.create({
+const estilosBase = StyleSheet.create({
 
   // FUNDO PRINCIPAL
   container: {

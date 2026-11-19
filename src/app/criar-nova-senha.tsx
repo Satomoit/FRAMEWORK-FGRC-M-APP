@@ -19,11 +19,15 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useCorDoTema, type CorDoTema } from "@/components/cor-do-tema";
 import { REGRA_SENHA_TEXTO, oQueFaltaNaSenha } from "@/lib/politica-senha";
 import { supabase } from "@/lib/supabase";
+// [integração 19/11] escala do texto nas telas do celular
+import { useEstilosEscalados } from '@/components/escala-texto';
 
 export default function HomeScreen() {
   // [tema] cores que seguem o tema escolhido (Configurações ou Opções da página inicial)
   const { cor, escuro } = useCorDoTema();
-  const styles = useMemo(() => criarEstilos(cor), [cor]);
+  const estilosBase = useMemo(() => criarEstilos(cor), [cor]);
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   const router = useRouter();
 
   // Armazenar as senhas digitadas

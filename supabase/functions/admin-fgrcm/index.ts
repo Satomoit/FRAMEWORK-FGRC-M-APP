@@ -7,14 +7,21 @@
 //   * listar as contas cadastradas e desativar/reativar uma conta
 //   * [v3] desativar agora também derruba as sessões abertas da pessoa (fgrcm_encerrar_sessoes)
 //   * [v3] mensagens de erro de e-mail mais claras (limite de 60 s por e-mail x limite por hora)
-// os e-mails levam SÓ o código de 6 números (modelos Invite user e Magic link do painel)
+//   * [v4 - 19/11] excluir conta de vez (excluir_usuario) e excluir solicitação (excluir_pedido),
+//     tratando os dados pessoais (ver supabase/migrations/20261119140000_fgrcm_exclusao_definitiva.sql)
+//   * [v4 - 19/11] aviso por e-mail "solicitação aprovada" depois de aprovar, e reenviar_aviso pra
+//     quando o aviso falhou (a aprovação NÃO depende do e-mail dar certo)
+// os e-mails do login levam SÓ o código (8 números no projeto, modelos Invite user e Magic link do painel)
 // o link de acesso por e-mail ficou fora da entrega: no celular ele caía no Site URL (localhost) e não entrava
 // antes de qualquer coisa a função pergunta pro banco se quem chamou é admin (estado_admin_fgrcm)
 // assim a regra de "quem é admin" fica num lugar só: a tabela public.administradores (+ MFA se ativado)
 //
 // publicar: o arquivo também ta em supabase/functions/admin-fgrcm/index.ts
-// (painel > Edge Functions > admin-fgrcm > Code > cole > Deploy)
+// [v4] agora ela usa ../_shared/email-fgrcm.ts, então publique pela linha de comando
+// (npx supabase functions deploy admin-fgrcm), colar só este arquivo no painel não funciona mais
 import { createClient, type User } from 'npm:@supabase/supabase-js@2';
+
+import { notificar, textoDoAviso, type Ativacao, type EventoEmail, type ResultadoAviso } from '../_shared/email-fgrcm.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -88,7 +95,11 @@ Deno.serve(async (req) => {
 
   const admin = { id: quem.user.id, email: quem.user.email ?? null };
 
-  let corpo: { acao?: string; pedidoId?: string; modo?: string; observacao?: string; userId?: string; email?: string };
+  let corpo: {
+    acao?: string; pedidoId?: string; modo?: string; observacao?: string; userId?: string; email?: string;
+    // [v4] confirmacao = a palavra EXCLUIR digitada no aplicativo; evento = qual aviso reenviar
+    confirmacao?: string; evento?: string;
+  };
   try {
     corpo = await req.json();
   } catch {
@@ -130,7 +141,18 @@ Deno.serve(async (req) => {
     return null;
   }
 
-  // gera um código de 6 números (sem mandar e-mail) pra administração passar pra pessoa
+  // [v4] manda o aviso por e-mail sem deixar um erro dele derrubar a ação principal
+  // (a aprovação já foi gravada antes; o aviso é um extra)
+  async function avisar(evento: EventoEmail, pedido: { id: string; nome: string; email: string; prefeitura: string }, ativacao?: Ativacao): Promise<ResultadoAviso> {
+    try {
+      return await notificar(servidor, evento, pedido, { ativacao, ler: (n) => Deno.env.get(n) });
+    } catch (e) {
+      console.error('aviso por e-mail: erro inesperado', (e as Error)?.name ?? '');
+      return { status: 'falhou', erro: 'erro_inesperado' };
+    }
+  }
+
+  // gera um código de ativação (sem mandar e-mail) pra administração passar pra pessoa
   // conta que ainda não ativou = código de convite; conta já ativa = código de entrada
   // a pessoa usa em "Ativar acesso" (e-mail + código) e cria a senha dela
   async function gerarCodigo(conta: User): Promise<string | null> {
@@ -209,8 +231,13 @@ Deno.serve(async (req) => {
       return resposta(500, { erro: 'A conta foi criada, mas o pedido não foi marcado como aprovado. Atualize a lista.' });
     }
 
+    // [v4] aviso "solicitação aprovada": só depois que a aprovação foi gravada, e sem travar a resposta
+    // o texto do e-mail muda conforme o jeito de ativar (convite por e-mail, código passado pela equipe ou senha)
+    const aviso = await avisar('pedido_aprovado', pedido, corpo.modo === 'convite' ? 'convite' : corpo.modo === 'codigo' ? 'codigo' : 'senha');
+
     return resposta(200, {
       ok: true,
+      aviso: { status: aviso.status, mensagem: textoDoAviso(aviso, 'pedido_aprovado') },
       senhaProvisoria: senha,
       codigo,
       mensagem: senha
@@ -322,6 +349,108 @@ Deno.serve(async (req) => {
           : `Conta desativada. Sessões abertas encerradas: ${sessoes}.`
         : 'Conta reativada.',
     });
+  }
+
+  // ---------------- [v4] reenviar aviso por e-mail (quando falhou ou o envio ainda não tava configurado) ----------------
+  if (acao === 'reenviar_aviso') {
+    if (!uuidValido(corpo.pedidoId)) return resposta(400, { erro: 'Pedido não informado.' });
+    const evento = corpo.evento === 'pedido_recebido' || corpo.evento === 'pedido_aprovado' ? corpo.evento : null;
+    if (!evento) return resposta(400, { erro: 'Escolha qual aviso reenviar.' });
+    const { data: pedido } = await servidor.from('access_requests').select('id, nome, email, prefeitura, status').eq('id', corpo.pedidoId).maybeSingle();
+    if (!pedido) return resposta(404, { erro: 'Pedido não encontrado.' });
+    // não manda "recebido" de pedido já decidido, nem "aprovado" de pedido que não foi aprovado
+    if (evento === 'pedido_recebido' && pedido.status !== 'pendente') return resposta(409, { erro: 'Esse pedido já foi analisado: o aviso de "recebido" não faz mais sentido.' });
+    if (evento === 'pedido_aprovado' && pedido.status !== 'aprovado') return resposta(409, { erro: 'Esse pedido não está aprovado.' });
+
+    let ativacao: Ativacao | undefined;
+    if (evento === 'pedido_aprovado') {
+      const conta = await acharConta(undefined, pedido.email);
+      if (!conta) return resposta(409, { erro: 'A conta desse pedido não existe mais. O aviso de aprovação não foi enviado.' });
+      // já entrou alguma vez = não manda ativar de novo
+      ativacao = conta.last_sign_in_at ? 'ja_ativa' : conta.user_metadata?.senha_provisoria === true ? 'senha' : 'pendente';
+    }
+    const aviso = await avisar(evento, pedido, ativacao);
+    await registrar('aviso_email_reenvio', 'access_requests', pedido.id, aviso.status, { evento });
+    return resposta(200, { ok: true, aviso: { status: aviso.status, mensagem: textoDoAviso(aviso, evento) } });
+  }
+
+  // ---------------- [v4] excluir conta de vez ----------------
+  // ordem pensada pra falha no meio não deixar a conta usável nem fingir que deu certo:
+  //   1) bloqueia a conta e derruba as sessões (daqui pra frente ela não entra mais)
+  //   2) apaga/anonimiza os dados pessoais no banco (uma transação só: ou faz tudo ou nada)
+  //   3) apaga a conta de login (auth.users)
+  // se o 2 ou o 3 falhar, a resposta diz o que ficou faltando e dá pra tentar de novo (os passos podem repetir)
+  if (acao === 'excluir_usuario') {
+    if (!uuidValido(corpo.userId)) return resposta(400, { erro: 'Conta não informada.' });
+    if (corpo.confirmacao !== 'EXCLUIR') return resposta(400, { erro: 'Para excluir, digite EXCLUIR na confirmação.' });
+    if (corpo.userId === admin.id) return resposta(400, { erro: 'Você não pode excluir a sua própria conta.' });
+    const { data: ehAdmin } = await servidor.from('administradores').select('user_id').eq('user_id', corpo.userId).maybeSingle();
+    if (ehAdmin) return resposta(400, { erro: 'Contas de administração não podem ser excluídas pelo aplicativo.' });
+
+    const { data: alvo } = await servidor.auth.admin.getUserById(corpo.userId);
+    if (!alvo?.user) return resposta(404, { erro: 'Conta não encontrada. Atualize a lista.' });
+    // o e-mail que tava na tela tem que ser o da conta (evita excluir a conta errada com a lista desatualizada)
+    if ((corpo.email ?? '').trim().toLowerCase() !== (alvo.user.email ?? '').toLowerCase()) {
+      return resposta(409, { erro: 'A conta mudou desde que a lista foi carregada. Atualize a lista e tente de novo.' });
+    }
+
+    // 1) bloqueia e derruba as sessões
+    const { error: erroBloqueio } = await servidor.auth.admin.updateUserById(corpo.userId, { ban_duration: '876000h' });
+    if (erroBloqueio) return resposta(500, { erro: 'Não foi possível excluir: a conta não pôde ser bloqueada. Nada foi apagado.' });
+    const { error: erroSessoes } = await servidor.rpc('fgrcm_encerrar_sessoes', { p_user: corpo.userId });
+    if (erroSessoes) console.error('exclusão: não deu pra encerrar as sessões', erroSessoes.code ?? '');
+
+    // 2) dados pessoais (pedidos, suporte, avisos e histórico)
+    const { data: limpeza, error: erroLimpeza } = await servidor.rpc('fgrcm_excluir_dados_da_conta', {
+      p_user: corpo.userId, p_admin: admin.id, p_admin_email: admin.email, p_motivo: observacao,
+    });
+    if (erroLimpeza) {
+      console.error('exclusão: limpeza dos dados falhou', erroLimpeza.code ?? '', erroLimpeza.message ?? '');
+      await registrar('conta_exclusao_incompleta', 'auth.users', corpo.userId, 'bloqueada', { etapa: 'dados pessoais' });
+      return resposta(500, {
+        parcial: true,
+        erro: 'A exclusão não terminou. A conta foi bloqueada (a pessoa não entra mais), mas nenhum dado foi apagado. Tente "Excluir definitivamente" de novo.',
+      });
+    }
+
+    // 3) conta de login (apagada de vez, não é a exclusão "suave" do Supabase)
+    const { error: erroConta } = await servidor.auth.admin.deleteUser(corpo.userId);
+    if (erroConta) {
+      console.error('exclusão: apagar a conta falhou', erroConta.code ?? '', erroConta.status ?? '');
+      await registrar('conta_exclusao_incompleta', 'auth.users', corpo.userId, 'bloqueada', { etapa: 'conta de login', ...(limpeza as Record<string, unknown>) });
+      return resposta(500, {
+        parcial: true,
+        erro: 'A exclusão não terminou. Os dados pessoais foram removidos e a conta está bloqueada, mas a conta de login ainda existe. Tente "Excluir definitivamente" de novo.',
+      });
+    }
+
+    await registrar('conta_excluida', 'auth.users', corpo.userId, 'excluída', { ...(limpeza as Record<string, unknown>) });
+    const l = (limpeza ?? {}) as Record<string, number>;
+    return resposta(200, {
+      ok: true,
+      resumo: limpeza,
+      mensagem: `Conta excluída definitivamente. Pedidos de acesso: ${l.pedidos_excluidos ?? 0} apagado(s) e ${l.pedidos_anonimizados ?? 0} mantido(s) sem dados pessoais. Mensagens de suporte sem dados pessoais: ${l.chamados_anonimizados ?? 0}. As avaliações salvas no celular da pessoa não são apagadas pelo servidor.`,
+    });
+  }
+
+  // ---------------- [v4] excluir uma solicitação de acesso ----------------
+  if (acao === 'excluir_pedido') {
+    if (!uuidValido(corpo.pedidoId)) return resposta(400, { erro: 'Pedido não informado.' });
+    if (corpo.confirmacao !== 'EXCLUIR') return resposta(400, { erro: 'Para excluir, digite EXCLUIR na confirmação.' });
+    const { data, error } = await servidor.rpc('fgrcm_excluir_pedido', {
+      p_pedido: corpo.pedidoId, p_admin: admin.id, p_admin_email: admin.email, p_motivo: observacao,
+    });
+    if (error) {
+      const m = error.message ?? '';
+      if (/pedido_nao_encontrado/.test(m)) return resposta(404, { erro: 'Essa solicitação não existe mais. Atualize a lista.' });
+      if (/pedido_de_conta_existente/.test(m)) {
+        return resposta(409, { erro: 'Essa solicitação foi aprovada e a conta da pessoa ainda existe. Para apagar os dados dela, use "Excluir definitivamente" na aba Contas.' });
+      }
+      if (/sem_permissao/.test(m)) return resposta(403, { erro: 'Só a administração pode fazer isso.' });
+      console.error('excluir pedido falhou', error.code ?? '');
+      return resposta(500, { erro: 'Não foi possível excluir a solicitação. Nada foi apagado. Tente de novo.' });
+    }
+    return resposta(200, { ok: true, resumo: data, mensagem: 'Solicitação excluída.' });
   }
 
   return resposta(400, { erro: 'Ação desconhecida.' });

@@ -9,8 +9,12 @@ import { useFgrcTheme } from '@/components/fgrc-colors';
 import { FgrcButton, Notice, OrangeLink, Page } from '@/components/fgrc-ui';
 import { NOME_STATUS_CHAMADO, listarMeusChamados, protocoloDo, type Chamado, type StatusChamado } from '@/lib/chamados';
 import { dataHoraDa } from '@/lib/datas';
+// [integração 19/11] escala do texto nas telas do celular
+import { useEstilosEscalados } from '@/components/escala-texto';
 
 export default function MeusChamados() {
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   const router = useRouter();
   const { colors } = useFgrcTheme();
   const [chamados, setChamados] = useState<Chamado[] | null>(null);
@@ -122,7 +126,7 @@ export default function MeusChamados() {
   );
 }
 
-const styles = StyleSheet.create({
+const estilosBase = StyleSheet.create({
   topo: { gap: 4, marginBottom: 12 },
   carregando: { marginTop: 24 },
   vazio: { fontSize: 15, lineHeight: 22, marginTop: 8 },

@@ -6,6 +6,8 @@ import { ClassificationBadge } from './components/ClassificationBadge';
 import { FgrcButton } from '@/components/fgrc-ui';
 import { radius, useCoresP05, type CoresP05 } from './theme';
 import { AssessmentResult } from './types';
+// [integração 19/11] escala do texto nas telas do celular
+import { useEstilosEscalados } from '@/components/escala-texto';
 
 interface Props {
   results: AssessmentResult[];
@@ -17,7 +19,9 @@ interface Props {
 export function ResultadosScreen({ results, onOpenDetails, onStartAssessment }: Props) {
   // [integração] cores seguem o tema do app (claro, escuro e alto contraste das Configurações)
   const colors = useCoresP05();
-  const styles = useMemo(() => criarEstilos(colors), [colors]);
+  const estilosBase = useMemo(() => criarEstilos(colors), [colors]);
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Resultados</Text>

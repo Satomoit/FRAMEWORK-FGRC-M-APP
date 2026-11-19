@@ -22,13 +22,19 @@ import { supabase } from "@/lib/supabase";
 // [integração P02] só aceita e-mail de prefeitura (e @gmail.com enquanto a gente testa)
 import { problemaNoEmailInstitucional } from "@/lib/email-institucional";
 import { plataformaDoPedido } from "@/lib/plataforma";
+// [integração 19/11] e-mail de confirmação do pedido (sai pelo servidor, ver src/lib/aviso-pedido-recebido.ts)
+import { pedirAvisoDePedidoRecebido } from "@/lib/aviso-pedido-recebido";
 // [correção Android] lista de estados que abre por cima da tela (o teclado não cobre)
 import { SeletorDeEstado } from "@/components/seletor-uf";
+// [integração 19/11] escala do texto nas telas do celular
+import { useEstilosEscalados } from '@/components/escala-texto';
 
 export default function SolicitarAcesso() {
   // [tema] cores que seguem o tema escolhido (Configurações ou Opções da página inicial)
   const { cor, escuro } = useCorDoTema();
-  const styles = useMemo(() => criarEstilos(cor), [cor]);
+  const estilosBase = useMemo(() => criarEstilos(cor), [cor]);
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   const router = useRouter();
 
   const [nome, setNome] = useState("");
@@ -110,6 +116,10 @@ export default function SolicitarAcesso() {
         }
         return;
       }
+
+      // [integração 19/11] pede o e-mail "Solicitação de acesso recebida" (não espera: o pedido já ta gravado)
+      // a tela seguinte só fala do e-mail se o servidor confirmar que mandou
+      pedirAvisoDePedidoRecebido(emailLimpo);
 
       // Navegação da Tela 01 para a Tela 02 (só depois de gravar de verdade)
       router.replace("/explore");

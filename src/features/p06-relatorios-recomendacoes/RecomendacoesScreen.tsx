@@ -6,6 +6,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { baixarRelatorioPdf } from './pdf';
 import { radius, useCoresP06, type CoresP06 } from './theme';
 import { Recommendation, Report } from './types';
+// [integração 19/11] escala do texto nas telas do celular
+import { useEstilosEscalados } from '@/components/escala-texto';
 
 interface Props {
   report: Report;
@@ -20,7 +22,9 @@ export function RecomendacoesScreen({
 }: Props) {
   // [integração] cores seguem o tema do app (claro, escuro e alto contraste das Configurações)
   const colors = useCoresP06();
-  const styles = useMemo(() => criarEstilos(colors), [colors]);
+  const estilosBase = useMemo(() => criarEstilos(colors), [colors]);
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   const [loading, setLoading] = useState(false);
   // [correção Android] mostra onde o PDF foi salvo (ou por que não salvou)
   const [aviso, setAviso] = useState('');

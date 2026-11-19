@@ -16,6 +16,16 @@ const testes = [
   'teste-datas-digitadas.cjs',
   // [segurança] só entra conta aprovada pela equipe (ou da administração)
   'teste-conta-liberada.cjs',
+  // [integração 19/11] defeitos B11, B12 e B13
+  'teste-textos-e-codigo.cjs',
+  // [integração 19/11] funções do servidor: exclusão definitiva e avisos por e-mail (tudo simulado)
+  'teste-funcoes-servidor.cjs',
+  'teste-avisos-e-exclusao-app.cjs',
+  // [integração 19/11] tamanho do texto em todas as telas e tutorial guiado
+  'teste-escala-texto.cjs',
+  'teste-tutorial.cjs',
+  // [integração 19/11] atalho da administração aparecendo na hora
+  'teste-atalho-admin.cjs',
 ];
 
 let falhas = 0;

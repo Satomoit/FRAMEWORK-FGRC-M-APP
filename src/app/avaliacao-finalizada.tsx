@@ -7,8 +7,12 @@ import {
 } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
+// [integração 19/11] escala do texto nas telas do celular
+import { useEstilosEscalados } from '@/components/escala-texto';
 
 export default function AvaliacaoFinalizada() {
+  // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
+  const styles = useEstilosEscalados(estilosBase);
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
@@ -79,7 +83,7 @@ export default function AvaliacaoFinalizada() {
   );
 }
 
-const styles = StyleSheet.create({
+const estilosBase = StyleSheet.create({
 
   // FUNDO PRINCIPAL
   container: {
