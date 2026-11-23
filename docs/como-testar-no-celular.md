@@ -43,6 +43,12 @@ Cada vez que você mudar o código, gere um APK novo e mande o link novo.
 
 ## B. Link no navegador (serve para iPhone)
 
+> **Publicado em 23/11/2026:** <https://fgrc-m.expo.app>. Para atualizar o site depois de mudar o código, rode os dois comandos do passo 1 de novo (o endereço continua o mesmo).
+>
+> **iPhone não instala o app.** Para instalar no iPhone (App Store ou TestFlight) a equipe precisaria de uma conta paga de desenvolvedor da Apple. O caminho é o site: no Safari, **Compartilhar > Adicionar à Tela de Início** cria um ícone que abre o app em tela cheia.
+>
+> **Expo Go no iPhone** (opção C) exige que o celular esteja logado na mesma conta da Expo do computador (`fgrc-m`). Não passe a senha da conta da equipe para testadores.
+
 1. No terminal da mesma pasta:
    ```powershell
    npx expo export -p web
