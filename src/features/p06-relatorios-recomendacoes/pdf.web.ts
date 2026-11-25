@@ -4,9 +4,10 @@ import { PDFDocument, StandardFonts, rgb, type PDFFont } from 'pdf-lib';
 import type { Recommendation, Report } from './types';
 // [integração] nota máxima, referência, data/hora e explicação do cálculo saem do mesmo lugar das telas
 import {
-  EXPLICACAO_DO_CALCULO,
   comLetraMaiuscula,
   dataHoraDa,
+  // [integração 25/11] o texto de "como ler" agora depende da avaliação (as antigas tinham o AWR até 3)
+  explicacaoDoCalculo,
   textoReferencia,
   valorMaximoDa,
 } from '@/lib/calcular-relatorio';
@@ -139,7 +140,7 @@ async function montarPdf(
   escrever(`Data da avaliação: ${report.finalizedAt ? dataHoraDa(report.finalizedAt) : report.date}`, 10, false, 2);
   escrever(`Código da avaliação: ${report.id}`, 9);
   escrever(`Resultado geral: ${report.score} de 100 (${report.classification})`, 12, true, 8);
-  escrever(EXPLICACAO_DO_CALCULO, 9, false, 12);
+  escrever(explicacaoDoCalculo(report.answers), 9, false, 12);
 
   if (report.dimensions?.length) {
     escrever('Resultado por eixo', 13, true);
@@ -153,7 +154,7 @@ async function montarPdf(
   report.answers.forEach((resposta, indice) => {
     escrever(`${indice + 1}. ${resposta.eixo} (${resposta.codigo})`, 11, true, 2);
     escrever(`Pergunta: ${resposta.pergunta}`);
-    // [integração] mostra a nota sobre o máximo real da pergunta (AWR vai até 3)
+    // [integração] mostra a nota sobre o máximo real da pergunta (nas avaliações antigas o AWR ia até 3)
     escrever(`Resposta: ${resposta.alternativa} (nota ${resposta.valor} de ${valorMaximoDa(resposta)}). ${comLetraMaiuscula(resposta.descricao)}`);
     escrever(resposta.recomendacao
       ? `Recomendação: ${resposta.recomendacao}`
@@ -167,7 +168,9 @@ async function montarPdf(
   else escrever('Prioridade alta: respostas com nota 0 ou 1. Prioridade média: respostas com nota 2 ou 3.', 9, false, 8);
   for (const prioridade of ['alta', 'média'] as const) {
     for (const rec of recs.filter(r => r.priority === prioridade)) {
-      escrever(`${rec.code} - prioridade ${rec.priority}: ${rec.solution}`);
+      // [integração 25/11] quando tem a explicação simples, a solução fica mais colada nela (espaço 2)
+      escrever(`${rec.code} - prioridade ${rec.priority}: ${rec.solution}`, 10, false, rec.simpleExplanation ? 2 : 6);
+      if (rec.simpleExplanation) escrever(`Em palavras simples: ${rec.simpleExplanation}`, 10, false, 10);
     }
   }
 

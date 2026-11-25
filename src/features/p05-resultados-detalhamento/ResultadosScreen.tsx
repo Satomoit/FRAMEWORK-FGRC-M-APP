@@ -8,6 +8,8 @@ import { radius, useCoresP05, type CoresP05 } from './theme';
 import { AssessmentResult } from './types';
 // [integração 19/11] escala do texto nas telas do celular
 import { useEstilosEscalados } from '@/components/escala-texto';
+// [integração 25/11] escolhe singular ou plural ("1 ponto de atenção", "3 pontos de atenção")
+import { contagem } from '@/lib/textos';
 
 interface Props {
   results: AssessmentResult[];
@@ -55,7 +57,8 @@ export function ResultadosScreen({ results, onOpenDetails, onStartAssessment }: 
           <View style={styles.divider} />
 
           <View style={styles.row}>
-            <Text style={styles.points}>{r.attentionPoints.length} pontos de atenção</Text>
+            {/* [integração 25/11] antes aparecia "1 pontos de atenção" quando só tinha um */}
+            <Text style={styles.points}>{contagem(r.attentionPoints.length, 'ponto de atenção', 'pontos de atenção')}</Text>
             <Text style={styles.link}>Ver detalhes</Text>
           </View>
         </Pressable>

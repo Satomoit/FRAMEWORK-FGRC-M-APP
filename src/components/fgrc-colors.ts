@@ -76,6 +76,10 @@ const altoContrasteEscuro = {
   text: "#FFFFFF",
   muted: "#F2F2F2",
   blue: "#9DD3FF",
+  // [integração 25/11] nesse modo o azul dos botões fica clarinho, e o texto branco em cima dele quase sumia
+  // (contraste de 1,6:1, e o mínimo recomendado é 4,5:1); com preto fica 13:1
+  // as telas de Login e Conheça já faziam isso por conta própria, agora vale pra todos os botões azuis
+  blueOnButton: "#000000",
   border: "#FFFFFF",
   divider: "#FFFFFF",
   selected: "#1F3B57",

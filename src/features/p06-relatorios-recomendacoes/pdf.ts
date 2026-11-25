@@ -9,9 +9,10 @@ import { Platform } from 'react-native';
 import { Recommendation, Report } from './types';
 // [integração] nota máxima, referência, data/hora e explicação do cálculo (mesmas do PDF da web)
 import {
-  EXPLICACAO_DO_CALCULO,
   comLetraMaiuscula,
   dataHoraDa,
+  // [integração 25/11] o texto de "como ler" agora depende da avaliação (as antigas tinham o AWR até 3)
+  explicacaoDoCalculo,
   textoReferencia,
   valorMaximoDa,
 } from '@/lib/calcular-relatorio';
@@ -54,6 +55,8 @@ export function buildHtml(report: Report, recs: Recommendation[]): string {
     )
     .join('');
 
+  // [integração 25/11] cada recomendação pode vir com a explicação em palavras simples ("Em palavras simples: ...")
+  // ela só aparece quando existe, então relatório sem explicação sai igual era antes
   const items = recs
     .map(
       (r) => `
@@ -61,6 +64,7 @@ export function buildHtml(report: Report, recs: Recommendation[]): string {
         <h3>${escape(r.code)} <span class="prio ${r.priority === 'alta' ? 'high' : 'mid'}">Prioridade ${r.priority}</span></h3>
         <p><b>Resposta registrada:</b> ${r.answerValue} — ${escape(r.answerLabel)}</p>
         <p><b>Solução recomendada:</b> ${escape(r.solution)}</p>
+        ${r.simpleExplanation ? `<p class="simple"><b>Em palavras simples:</b> ${escape(r.simpleExplanation)}</p>` : ''}
         <p class="ref">Referência: ${escape(r.reference)}</p>
       </div>`,
     )
@@ -98,6 +102,7 @@ export function buildHtml(report: Report, recs: Recommendation[]): string {
     .mid { background: #D5CBC0; color: #B7791F; }
     .high { background: #D8C3BE; color: #B42318; }
     .ref { color: #4A5568; font-size: 13px; }
+    .simple { background: #EEF3F9; border-left: 4px solid #0B4F8A; padding: 8px 10px; margin: 8px 0; line-height: 1.4; }
     .answer { padding: 10px 0; margin-bottom: 12px; border-bottom: 1px solid #D9DEE5; page-break-inside: avoid; }
     .answer h3 { margin-bottom: 7px; color: #0B4F8A; }
     .answer p { margin: 6px 0; line-height: 1.4; }
@@ -117,7 +122,7 @@ export function buildHtml(report: Report, recs: Recommendation[]): string {
     ${dimensions ? `<h2>Resultados por dimensão</h2><div class="box">${dimensions}</div>` : ''}
     ${points ? `<h2>Pontos de atenção</h2><div class="box">${points}</div>` : ''}
 
-    <p class="meta">${escape(EXPLICACAO_DO_CALCULO)}</p>
+    <p class="meta">${escape(explicacaoDoCalculo(report.answers ?? []))}</p>
     <h2>Respostas completas (${report.answers?.length ?? 0})</h2>
     ${answers}
     <h2>Recomendações prioritárias</h2>${items || '<p>Não há recomendações corretivas cadastradas para estas respostas.</p>'}
@@ -226,4 +231,4 @@ async function compartilharArquivo(arquivo: File, titulo: string): Promise<Resul
 // agora ele faz o mesmo que o Baixar PDF
 export async function generateReportPdf(report: Report, recs: Recommendation[]): Promise<ResultadoPdf> {
   return baixarRelatorioPdf(report, recs);
-}
+}

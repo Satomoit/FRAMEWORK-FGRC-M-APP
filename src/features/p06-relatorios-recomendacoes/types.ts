@@ -29,4 +29,7 @@ export interface Recommendation {
   answerLabel: string;
   solution: string;
   reference: string;
+  // [integração 25/11] explicação da solução em palavras simples ("Ficou com dúvida em como resolver?")
+  // é opcional: se não tiver, a tela e o PDF mostram só a solução, como antes
+  simpleExplanation?: string;
 }

@@ -20,6 +20,9 @@ import { carregarResumoInicio } from '@/lib/resumo-inicio';
 import { contagem } from '@/lib/textos';
 // [integração] mini tutorial (primeira vez pergunta se quer ver; depois abre pelo "Como usar")
 import TutorialInicial, { useTutorial } from '@/features/integracao/TutorialInicial';
+// [integração 25/11] leitura obrigatória dos Termos de Uso no primeiro acesso com senha provisória
+import AceiteDosTermos from '@/features/integracao/AceiteDosTermos';
+import { termosJaAceitos, type RegistroDoAceite } from '@/lib/aceite-dos-termos';
 
 type NomeIcone = ComponentProps<typeof Ionicons>['name'];
 
@@ -71,6 +74,10 @@ export default function HomeScreen() {
   // [integração B1b] agora recebe: começa vazio ("—") e é preenchido com o que ta salvo no aparelho
   const [dados, setDados] = useState<DadosInicio>(dadosIniciais);
   const tutorial = useTutorial();
+  // [integração 25/11] janela dos Termos de Uso (só abre pra conta que ta sendo ativada com senha provisória)
+  const [termosAbertos, setTermosAbertos] = useState(false);
+  const [gravandoAceite, setGravandoAceite] = useState(false);
+  const [erroDoAceite, setErroDoAceite] = useState('');
   // [integração] a Home mostra só os 3 primeiros pontos de atenção (o resto fica em Resultados)
   const MAX_PONTOS_NA_HOME = 3;
 
@@ -80,6 +87,13 @@ export default function HomeScreen() {
     if (!autenticado) return;
     supabase.auth.getUser().then(({ data }) => {
       if (data.user?.user_metadata?.senha_provisoria === true) {
+        // [integração 25/11] primeiro acesso com senha provisória = a pessoa ta ativando a conta
+        // antes de trocar a senha ela lê e aceita os Termos de Uso (a janela abre por cima da Home)
+        // quem já aceitou esta versão dos termos (ex: recebeu outra senha provisória) vai direto pra troca
+        if (!termosJaAceitos(data.user.user_metadata)) {
+          setTermosAbertos(true);
+          return;
+        }
         router.replace('/alterar-senha?provisoria=1' as Href);
       }
     }).catch(() => {});
@@ -215,6 +229,38 @@ export default function HomeScreen() {
     }
   }
 
+  // [integração 25/11] "Li e aceito": grava na conta a versão dos termos e a hora (user_metadata do Supabase)
+  // e só depois leva pra troca da senha provisória. Se não conseguir gravar, a janela continua aberta com o aviso
+  async function aceitarTermos(registro: RegistroDoAceite) {
+    if (gravandoAceite) return;
+
+    setGravandoAceite(true);
+    setErroDoAceite('');
+
+    try {
+      const { error } = await supabase.auth.updateUser({ data: registro });
+
+      if (error) {
+        setErroDoAceite('Não foi possível registrar o aceite. Confira a internet e tente de novo.');
+        return;
+      }
+
+      setTermosAbertos(false);
+      router.replace('/alterar-senha?provisoria=1' as Href);
+    } catch {
+      setErroDoAceite('Não foi possível registrar o aceite. Confira a internet e tente de novo.');
+    } finally {
+      setGravandoAceite(false);
+    }
+  }
+
+  // [integração 25/11] "Não aceito": sem aceitar os termos a conta não é ativada, então sai da conta
+  // (usa o mesmo sair() do menu; sem sessão a Home volta sozinha pra página inicial)
+  function recusarTermos() {
+    setTermosAbertos(false);
+    void sair();
+  }
+
   if (carregando || carregandoPreferencias) {
     return (
       <View style={styles.loading}>
@@ -241,8 +287,9 @@ export default function HomeScreen() {
       {/* [integração 19/11] com o tutorial aberto, o leitor de tela lê só o cartão do tutorial */}
       <View
         style={styles.page}
-        importantForAccessibility={tutorial.aberto ? 'no-hide-descendants' : 'auto'}
-        accessibilityElementsHidden={tutorial.aberto}
+        // [integração 25/11] vale o mesmo quando a janela dos Termos de Uso ta aberta
+        importantForAccessibility={tutorial.aberto || termosAbertos ? 'no-hide-descendants' : 'auto'}
+        accessibilityElementsHidden={tutorial.aberto || termosAbertos}
       >
         <ScrollView
           style={styles.scroll}
@@ -509,11 +556,22 @@ export default function HomeScreen() {
       </View>
 
       {/* [integração 19/11] tutorial guiado: fica por cima da tela inteira (inclusive do menu de baixo) */}
+      {/* [integração 25/11] com a janela dos termos aberta o tutorial espera (um de cada vez) */}
       <TutorialInicial
-        aberto={tutorial.aberto}
+        aberto={tutorial.aberto && !termosAbertos}
         perguntar={tutorial.perguntar}
         onFechar={tutorial.fechar}
         alvos={tutorial.alvos}
+      />
+
+      {/* [integração 25/11] leitura obrigatória dos Termos de Uso na ativação com senha provisória
+          fica por cima da tela inteira (inclusive do menu de baixo), igual o tutorial */}
+      <AceiteDosTermos
+        visivel={termosAbertos}
+        onAceitar={(registro) => { void aceitarTermos(registro); }}
+        onRecusar={recusarTermos}
+        ocupado={gravandoAceite || saindo}
+        erro={erroDoAceite}
       />
 
       <Modal
@@ -919,4 +977,4 @@ function criarEstilos(cores: Cores, escala: number) {
       lineHeight: 24 * escala,
     },
   });
-}
+}

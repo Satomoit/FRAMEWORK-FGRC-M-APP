@@ -25,7 +25,8 @@ export const colors = {
 
 export const radius = { card: 18, badge: 14, button: 16 };
 
-export type CoresP06 = Record<keyof typeof colors, string>;
+// [integração 25/11] + onPrimary = cor do texto em cima do botão azul (branco, ou preto no alto contraste escuro)
+export type CoresP06 = Record<keyof typeof colors | 'onPrimary', string>;
 
 // [integração] no modo claro fica bem parecido com o Figma; no escuro usa a paleta escura do app
 export function useCoresP06(): CoresP06 {
@@ -38,6 +39,7 @@ export function useCoresP06(): CoresP06 {
     border: app.border,
     divider: app.divider,
     primary: app.blue,
+    onPrimary: app.blueOnButton,
     accent: app.orange,
     accentBg: isDark ? '#4A3320' : colors.accentBg,
     danger: app.danger,

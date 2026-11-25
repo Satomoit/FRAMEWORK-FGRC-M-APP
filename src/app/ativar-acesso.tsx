@@ -20,6 +20,10 @@ import { REGRA_SENHA_TEXTO, oQueFaltaNaSenha } from '@/lib/politica-senha';
 import { supabase } from '@/lib/supabase';
 // [integração 19/11] escala do texto nas telas do celular
 import { useEstilosEscalados } from '@/components/escala-texto';
+// [integração 25/11] leitura obrigatória dos Termos de Uso antes de ativar a conta
+// (a janela fica por cima da tela, igual o tutorial; a pessoa só segue depois de ler até o fim e aceitar)
+import AceiteDosTermos from '@/features/integracao/AceiteDosTermos';
+import type { RegistroDoAceite } from '@/lib/aceite-dos-termos';
 
 export default function AtivarAcesso() {
   // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
@@ -35,6 +39,10 @@ export default function AtivarAcesso() {
   const [erro, setErro] = useState('');
   const [aviso, setAviso] = useState('');
   const [ocupado, setOcupado] = useState(false);
+  // [integração 25/11] aceite = null enquanto a pessoa não leu e aceitou os Termos de Uso
+  // depois do aceite guarda a versão dos termos e a hora, pra gravar na conta (a conta só "existe" pro app
+  // depois que o código é confirmado, por isso o aceite fica esperando aqui na tela até lá)
+  const [aceite, setAceite] = useState<RegistroDoAceite | null>(null);
 
   function voltar() {
     if (router.canGoBack()) router.back();
@@ -46,6 +54,8 @@ export default function AtivarAcesso() {
   // (o código de entrada é o que chega quando a pessoa clica em "Receber um código novo")
   async function confirmarCodigo() {
     if (ocupado) return;
+    // [integração 25/11] sem aceitar os termos não ativa (a tela já esconde o formulário, isso aqui é a garantia)
+    if (!aceite) return;
     setErro('');
     setAviso('');
     const emailLimpo = email.trim().toLowerCase();
@@ -69,6 +79,10 @@ export default function AtivarAcesso() {
         setErro('Código errado ou vencido. Confira o número ou peça um código novo.');
         return;
       }
+      // [integração 25/11] agora que a pessoa ta logada, já grava na conta que ela aceitou os termos
+      // (fica no user_metadata: versão do texto e hora do aceite. Se a internet falhar aqui não trava nada,
+      // pq o aceite vai de novo junto com a senha, no passo 2)
+      await supabase.auth.updateUser({ data: aceite }).catch(() => null);
       // deu certo: agora a pessoa ta logada só pra criar a senha
       setEtapa('senha');
     } catch {
@@ -116,11 +130,14 @@ export default function AtivarAcesso() {
     const falta = oQueFaltaNaSenha(senha);
     if (falta.length) { setErro(`Falta na senha: ${falta.join(', ')}.`); return; }
     if (senha !== confirmar) { setErro('As senhas não coincidem.'); return; }
+    // [integração 25/11] não era pra chegar aqui sem aceite (a tela da senha só abre depois dele), mas garante
+    if (!aceite) { setErro('Para ativar a conta é preciso ler e aceitar os Termos de Uso.'); return; }
 
     setOcupado(true);
     try {
       // senha_provisoria: false = se a pessoa tinha uma senha provisória, o app para de pedir pra trocar
-      const { error } = await supabase.auth.updateUser({ password: senha, data: { senha_provisoria: false } });
+      // [integração 25/11] ...aceite = grava junto a versão dos termos e a hora em que a pessoa aceitou
+      const { error } = await supabase.auth.updateUser({ password: senha, data: { senha_provisoria: false, ...aceite } });
       if (error) {
         setErro(error.code === 'weak_password' ? REGRA_SENHA_TEXTO : 'Não foi possível salvar a senha. Tente de novo.');
         return;
@@ -150,12 +167,17 @@ export default function AtivarAcesso() {
     );
   }
 
+  // [integração 25/11] a tela ganhou uma "caixa" em volta (View) só pra janela dos termos conseguir ficar por cima de tudo
+  // enquanto os termos não forem aceitos, o formulário nem é desenhado: assim não dá pra digitar o código
+  // por trás da janela (nem com teclado no computador, nem com leitor de tela)
   return (
+    <View style={styles.tela}>
     <Page
       title="Ativar acesso"
       subtitle={`Quando a administração aprovar o seu pedido, você recebe um ${descricaoDoCodigo()} (por e-mail ou direto da administração). Digite o código aqui para criar sua senha. Não é preciso tocar em nenhum link do e-mail.`}
       onBack={voltar}
     >
+      {aceite ? (
       <View style={styles.bloco}>
         <FormField label="E-mail institucional" email value={email} onChangeText={v => { setEmail(v); setErro(''); }} placeholder="Digite o e-mail do pedido..." />
         <FormField label="Código de ativação" value={codigo} onChangeText={v => { setCodigo(v); setErro(''); }} placeholder={`Ex: ${exemploDeCodigo()}`} />
@@ -166,11 +188,17 @@ export default function AtivarAcesso() {
         {/* [entrada nova] o Login agora fica em /entrar ("/" virou a página Conheça o FGRC-M) */}
         <OrangeLink label="Voltar para login" onPress={() => router.replace('/entrar')} />
       </View>
+      ) : null}
     </Page>
+    {/* [integração 25/11] "Li e aceito" guarda o aceite e libera o formulário; "Não aceito" sai da ativação */}
+    <AceiteDosTermos visivel={!aceite} onAceitar={setAceite} onRecusar={voltar} />
+    </View>
   );
 }
 
 const estilosBase = StyleSheet.create({
+  // [integração 25/11] ocupa a tela inteira (é dentro dela que a janela dos termos se estica)
+  tela: { flex: 1 },
   bloco: { marginTop: 16, gap: 4 },
   dica: { fontSize: 13, lineHeight: 19, marginBottom: 10 },
 });

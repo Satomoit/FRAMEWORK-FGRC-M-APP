@@ -5,6 +5,8 @@ import { FgrcButton, Notice, Page } from "../../components/fgrc-ui";
 import { EIXOS_FGRC, TODAS_QUESTOES_FGRC } from "./questionarioData";
 // [integração 19/11] escala do texto nas telas do celular
 import { useEstilosEscalados } from '@/components/escala-texto';
+// [integração 25/11] primeira letra maiúscula nas alternativas (as do eixo AWR começam com minúscula no formulário)
+import { comLetraMaiuscula } from '@/lib/calcular-relatorio';
 
 type QuestionarioScreenProps = {
   respostas: Record<string, number>;
@@ -66,9 +68,11 @@ export default function QuestionarioScreen({
     }
   };
 
+  // [integração 25/11] cada etapa abaixo passa um valor diferente no rolarProTopoQuando
+  // quando ele muda (trocou de pergunta ou de etapa) a Page volta a tela pro começo
   if (etapa === "finalizada") {
     return (
-      <Page>
+      <Page rolarProTopoQuando="finalizada">
         <View style={styles.finalizadaContainer}>
           <View
             style={[
@@ -140,6 +144,7 @@ export default function QuestionarioScreen({
         title="Revisar avaliação"
         subtitle="Confira o andamento antes de finalizar."
         onBack={() => setEtapa("respondendo")}
+        rolarProTopoQuando="revisao"
       >
         <View style={styles.resumoRow}>
           <View
@@ -269,7 +274,8 @@ export default function QuestionarioScreen({
   }
 
   return (
-    <Page onBack={onSalvarESair}>
+    // [integração 25/11] o id da pergunta muda no Próxima, no Anterior, nas abas dos eixos e no "Responder" da revisão
+    <Page onBack={onSalvarESair} rolarProTopoQuando={`pergunta:${questaoAtual.id}`}>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -386,7 +392,7 @@ export default function QuestionarioScreen({
               <Text
                 style={[styles.alternativaDescricao, { color: colors.muted }]}
               >
-                {alt.descricao}
+                {comLetraMaiuscula(alt.descricao)}
               </Text>
             </Pressable>
           );

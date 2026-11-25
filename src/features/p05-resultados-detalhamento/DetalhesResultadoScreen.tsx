@@ -8,6 +8,8 @@ import { radius, useCoresP05, type CoresP05 } from './theme';
 import { AssessmentResult } from './types';
 // [integração 19/11] escala do texto nas telas do celular
 import { useEstilosEscalados } from '@/components/escala-texto';
+// [integração 25/11] frase que explica como ler o número (vem do mesmo arquivo que faz a conta)
+import { COMO_LER_O_INDICE } from '@/lib/calcular-relatorio';
 
 interface Props {
   result: AssessmentResult;
@@ -43,6 +45,9 @@ export function DetalhesResultadoScreen({ result, onBack, onOpenReport }: Props)
           <ClassificationBadge value={result.classification} />
         </View>
         <ProgressBar value={result.score} color={colors.accent} height={8} />
+        {/* [integração 25/11] sem essa frase dá pra achar que número baixo é ruim (igual nota de escola)
+            aqui é o contrário: o índice mede a exposição, então quanto menor, melhor */}
+        <Text style={styles.howToRead}>{COMO_LER_O_INDICE}</Text>
       </View>
 
       {/* Dimensões */}
@@ -72,6 +77,12 @@ export function DetalhesResultadoScreen({ result, onBack, onOpenReport }: Props)
       {/* Pontos de atenção */}
       <Text style={styles.section}>Pontos de atenção</Text>
       <View style={styles.card}>
+        {/* [integração 25/11] quando nenhum eixo chega em 50 a caixa ficava vazia (parecia erro); agora explica */}
+        {result.attentionPoints.length === 0 ? (
+          <Text style={styles.howToRead}>
+            Nenhum ponto de atenção nesta avaliação: todos os eixos ficaram abaixo de 50 de exposição.
+          </Text>
+        ) : null}
         {result.attentionPoints.map((p, i) => {
           const high = p.priority === 'alta';
           const tint = high ? colors.danger : colors.warning;
@@ -117,6 +128,8 @@ const criarEstilos = (colors: CoresP05) => StyleSheet.create({
     padding: 20,
   },
   cardLabel: { fontSize: 15, color: colors.text },
+  // [integração 25/11] texto de apoio (como ler o índice e aviso de lista vazia)
+  howToRead: { fontSize: 14, lineHeight: 20, color: colors.text, marginTop: 10 },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   bigScore: { fontSize: 34, fontWeight: '800', color: colors.primary },
   section: { fontSize: 20, fontWeight: '800', color: colors.title, marginTop: 24, marginBottom: 10 },
@@ -137,5 +150,6 @@ const criarEstilos = (colors: CoresP05) => StyleSheet.create({
     alignItems: 'center',
     marginTop: 22,
   },
-  buttonText: { color: '#FFFFFF', fontSize: 17, fontWeight: '700' },
+  // [integração 25/11] era branco fixo ('#FFFFFF'); no alto contraste escuro o botão fica azul claro e o branco sumia
+  buttonText: { color: colors.onPrimary, fontSize: 17, fontWeight: '700' },
 });

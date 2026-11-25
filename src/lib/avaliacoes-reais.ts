@@ -16,6 +16,7 @@ export type RespostaRegistrada = {
   nist: string;
   recomendacao: string | null;
   // [integração] nota máxima dessa pergunta (4 na maioria, 3 nas do eixo AWR, igual ao formulário)
+  // [integração 25/11] o AWR ganhou o nível 4, então avaliação nova guarda 4 em todas (as antigas continuam com o 3 que guardaram)
   // é opcional pq as avaliações salvas antes disso não têm (aí o cálculo procura no questionário)
   valorMaximo?: number;
 };

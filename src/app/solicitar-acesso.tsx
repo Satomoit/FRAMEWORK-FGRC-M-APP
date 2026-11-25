@@ -12,7 +12,8 @@ import {
   View,
 } from "react-native";
 
-import { useRouter } from "expo-router";
+// [integração 25/11] o Href é o "tipo" de um endereço de tela (usado no link da Política de Privacidade)
+import { useRouter, type Href } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -252,6 +253,23 @@ export default function SolicitarAcesso() {
               />
             </View>
 
+            {/* [integração 25/11] aviso de privacidade bem na hora em que a pessoa entrega os dados
+                (a LGPD pede que essa informação fique clara e fácil de achar, art. 9º)
+                tocar no trecho sublinhado abre a tela Privacidade e termos; como a tela nova abre POR CIMA
+                desta (pilha de telas), o que a pessoa já digitou continua aqui quando ela volta */}
+            <Text style={styles.avisoPrivacidade}>
+              Ao enviar, você declara que leu e concorda com a{" "}
+              <Text
+                accessibilityRole="link"
+                accessibilityHint="Abre a tela Privacidade e termos."
+                style={styles.avisoPrivacidadeLink}
+                onPress={() => router.push("/privacidade" as Href)}
+              >
+                Política de Privacidade e com os Termos de Uso
+              </Text>
+              .
+            </Text>
+
             {/* [integração P02] avisos e erros aparecem aqui */}
             {mensagem ? (
               <Text style={styles.mensagem} accessibilityLiveRegion="polite">
@@ -299,6 +317,20 @@ function criarEstilos(cor: CorDoTema) {
     lineHeight: 20,
     color: cor("#B42318", "error"),
     marginBottom: 12,
+  },
+  // [integração 25/11] aviso de privacidade em cima do botão de enviar (mesma cor da descrição lá de cima)
+  avisoPrivacidade: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: cor("#536782", "muted"),
+    marginBottom: 12,
+  },
+  // no tema claro o link é azul (cor do botão); no escuro e no alto contraste usa a cor do texto,
+  // que tem mais contraste (o sublinhado + negrito é que mostram que é link, não só a cor)
+  avisoPrivacidadeLink: {
+    color: cor("#12558F", "text"),
+    fontWeight: "600",
+    textDecorationLine: "underline",
   },
   safeArea: {
     flex: 1,

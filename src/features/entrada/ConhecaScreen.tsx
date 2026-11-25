@@ -55,10 +55,12 @@ const CARTOES: Cartao[] = [
   },
   {
     id: 'dados',
+    // [integração 25/11] era "eles não vão para a internet": o app não manda, mas ele não controla o backup
+    // que o próprio celular faz. Ficou igual ao texto da tela Privacidade e termos ("servidor do FGRC-M")
     icone: 'lock-closed-outline',
     titulo: 'Como meus dados são tratados?',
     texto:
-      'As respostas, os resultados e os relatórios ficam só no aparelho em que você usa o app; eles não vão para a internet. O PDF só sai do aparelho se você compartilhar. O servidor guarda apenas o necessário para a conta funcionar: nome, e-mail, prefeitura, município e estado, além dos pedidos de acesso e das mensagens de suporte.',
+      'As respostas, os resultados e os relatórios ficam só no aparelho em que você usa o app; eles não são enviados ao servidor do FGRC-M. O PDF só sai do aparelho se você baixar ou compartilhar. O servidor guarda apenas o necessário para a conta funcionar: nome, e-mail, prefeitura, município e estado, além dos pedidos de acesso e das mensagens de suporte.',
     linkPrivacidade: true,
   },
 ];

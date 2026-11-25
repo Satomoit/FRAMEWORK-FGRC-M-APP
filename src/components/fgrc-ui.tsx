@@ -1,5 +1,7 @@
 // ReactNode deixa a pagina receber outros componentes dentro dela
 import type { ComponentProps, ReactNode } from 'react';
+// [integração 25/11] useRef guarda a rolagem da página e o useEffect manda ela voltar pro topo
+import { useCallback, useEffect, useRef } from 'react';
 // [integração 19/11] ícones nos botões (✓ aprovar, ✕ recusar, lixeira excluir...)
 import Ionicons from '@expo/vector-icons/Ionicons';
 // esses componentes montam botões textos campos e rolagem (tudo no React Native)
@@ -14,21 +16,38 @@ type PageProps = {
   subtitle?: string;
   onBack?: () => void;
   children: ReactNode;
+  // [integração 25/11] quando esse valor muda, a página volta pro começo (ex: o questionário passa o código da pergunta)
+  // é opcional: tela que não passa nada continua igual era, sem mexer na rolagem
+  rolarProTopoQuando?: string | number;
 };
 
+// [integração 25/11] só o pedacinho da rolagem que a gente usa (o scrollTo existe igual no celular e no navegador)
+type Rolavel = { scrollTo: (opcoes: { y: number; animated?: boolean }) => void };
+
 // esse componente é a estrutura que todas as telas compartilham
-export function Page({ title, subtitle, onBack, children }: PageProps) {
+export function Page({ title, subtitle, onBack, children, rolarProTopoQuando }: PageProps) {
   // [integração 19/11] tamanho do texto escolhido em Configurações (vale no celular também)
   const styles = useEstilosEscalados(estilosBase);
   const { colors } = useFgrcTheme();
   // usa a largura pra ajustar a margem em telas pequenas
   const { width } = useWindowDimensions();
+  // [integração 25/11] retorno do teste de usabilidade: no questionário a pessoa tocava em Próxima,
+  // a pergunta mudava mas a tela continuava lá embaixo (tinha que subir sozinha pra ler a pergunta nova)
+  // a ScrollView é a mesma o tempo todo, então ela não "sabe" que o conteúdo mudou; por isso a tela avisa
+  // com o rolarProTopoQuando e aqui a gente manda a rolagem pro y = 0 (sem animação, pra não cansar a vista)
+  const rolagem = useRef<Rolavel | null>(null);
+  const guardarRolagem = useCallback((no: Rolavel | null) => { rolagem.current = no; }, []);
+  useEffect(() => {
+    if (rolarProTopoQuando === undefined) return;
+    rolagem.current?.scrollTo({ y: 0, animated: false });
+  }, [rolarProTopoQuando]);
   // a pagina tem rolagem pra vc conseguir ver tudo até no celular
   // [correção Android] o KeyboardAvoidingView encolhe a página quando o teclado abre
   // (sem ele, no Android o teclado ficava por cima dos campos do fim da tela, ex: a mensagem do suporte)
   return (
     <KeyboardAvoidingView style={styles.teclado} behavior={Platform.OS === 'web' ? undefined : 'padding'}>
     <ScrollView
+      ref={guardarRolagem}
       style={[styles.scroll, { backgroundColor: colors.background }]}
       contentContainerStyle={[styles.scrollContent, { paddingHorizontal: width < 400 ? 18 : 28 }]}
       keyboardShouldPersistTaps="handled"

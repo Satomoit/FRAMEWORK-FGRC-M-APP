@@ -58,6 +58,13 @@ Requisitos RNF-001 e RNF-002: as respostas e os resultados das avaliações não
 | Manutenção e versões do app (versão 1.1.0) | Tabelas `sistema_status` e `app_versoes`; o app lê pela função `estado_do_sistema_fgrcm` | Não sai nada do aparelho: o app só pergunta |
 | Pasta escolhida para salvar o PDF (Android) | AsyncStorage, chave `fgrcm:pdf:ultima-pasta` | Não |
 | Decisões da administração | Tabela `admin_audit_logs` | Sim |
+| Registros técnicos do login (data, hora, IP e tipo de navegador ou aparelho) | Tabelas de sessão e de auditoria do Supabase Auth | Sim, gerados pelo serviço de login |
+| Registro dos avisos por e-mail (destino, data e resultado) | Tabela `email_notificacoes` | Sim |
+| Aceite dos Termos de Uso (versão e data e hora) | Supabase Auth, `user_metadata` (`termos_aceitos_versao` e `termos_aceitos_em`) | Sim, gravado na ativação da conta |
+
+**Onde o servidor fica.** O projeto do Supabase está na região `ca-central-1` (Canadá), conferido em 25/11/2026. Os dados de conta, pedido de acesso e suporte ficam, portanto, fora do Brasil. A tela Privacidade e termos informa isso (seção 6 da Política) e a decisão sobre manter ou mudar a região está em `privacidade-e-termos-25-11-2026.md`, seção 6.
+
+**Cópia de segurança do Android.** "Não sai do aparelho" quer dizer que o app não envia. O `app.json` não desliga o backup automático do Android, então o sistema pode incluir os dados guardados pelo app na cópia de segurança da conta Google do dono do aparelho. A política avisa disso (seção 3) e a decisão de desligar o backup no próximo APK está em `privacidade-e-termos-25-11-2026.md`, seção 6, ponto 6.
 
 Verificação no código: nenhum arquivo envia `respostas`, `avaliacoes` ou o histórico ao Supabase. As únicas gravações no banco feitas pelo app são `access_requests` (pedido), `support_requests` (suporte e mudança de status pela administração) e as chamadas à função `admin-fgrcm`.
 

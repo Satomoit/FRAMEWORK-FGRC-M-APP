@@ -26,7 +26,8 @@ export const colors = {
 export const radius = { card: 18, badge: 14, button: 16 };
 
 // [integração] mesmas chaves do Figma + as cores do selo "Baixo" (que estavam fixas no ClassificationBadge)
-export type CoresP05 = Record<keyof typeof colors | 'success' | 'successBg', string>;
+// [integração 25/11] + onPrimary = cor do texto em cima do botão azul (branco, ou preto no alto contraste escuro)
+export type CoresP05 = Record<keyof typeof colors | 'success' | 'successBg' | 'onPrimary', string>;
 
 // [integração] no modo claro fica bem parecido com o Figma; no escuro usa a paleta escura do app
 // os fundos dos selos (dangerBg, warningBg, successBg) não existem no tema do app, então ficam aqui
@@ -41,6 +42,7 @@ export function useCoresP05(): CoresP05 {
     divider: app.divider,
     track: app.divider,
     primary: app.blue,
+    onPrimary: app.blueOnButton,
     accent: app.orange,
     danger: app.danger,
     dangerBg: isDark ? '#4A2527' : colors.dangerBg,

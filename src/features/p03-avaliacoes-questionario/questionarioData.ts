@@ -1,3 +1,8 @@
+// [integração 25/11] revisão das 32 perguntas (a lista completa ta em docs/revisao-das-questoes-25-11-2026.md)
+//  - o eixo AWR ganhou o nível 4 (Aprimorada) e a referência do NIST (PR.AT), igual os outros eixos
+//  - referências do NIST corrigidas em 01-BKP, 01-NET, 02-NET, 01-TPR e 02-TPR (tinham código antigo ou que não existe)
+//  - 6 acertos de português em 03-GOV, 05-GOV e 03-IAM (concordância e vírgula, o sentido é o mesmo)
+// o resto continua igual ao Formulário do grupo; cada mudança tem um comentário [integração 25/11] no lugar
 export type Alternativa = {
   valor: number;
   titulo: string;
@@ -147,7 +152,8 @@ export const EIXOS_FGRC: EixoFgrc[] = [
           {
             valor: 0,
             titulo: 'Inexistente',
-            descricao: 'Não existem funções, responsabilidades e autoridades definidos.',
+            // [integração 25/11] era "definidos" (concordância)
+            descricao: 'Não existem funções, responsabilidades e autoridades definidas.',
           },
           {
             valor: 1,
@@ -173,9 +179,9 @@ export const EIXOS_FGRC: EixoFgrc[] = [
         ],
         solucoes: {
           faixa0ou1:
-            'Formalizar as funções, responsabilidades e autoridades relacionados à gestão da segurança cibernética, documentando as atribuições dos responsáveis e comunicando-as aos envolvidos.',
+            'Formalizar as funções, responsabilidades e autoridades relacionadas à gestão da segurança cibernética, documentando as atribuições dos responsáveis e comunicando-as aos envolvidos.',
           faixa2:
-            'Revisar e delimitar as funções, responsabilidades e autoridades relacionados à gestão da segurança cibernética, eliminando sobreposições e lacunas de atribuições.',
+            'Revisar e delimitar as funções, responsabilidades e autoridades relacionadas à gestão da segurança cibernética, eliminando sobreposições e lacunas de atribuições.',
           faixa3:
             'Estabelecer uma avaliação periódica de verificação das funções, responsabilidades e autoridades relacionadas à gestão da segurança cibernética, assegurando a adequação ao contexto municipal.',
         },
@@ -254,7 +260,7 @@ export const EIXOS_FGRC: EixoFgrc[] = [
             valor: 2,
             titulo: 'Parcial',
             descricao:
-              'Existe uma avaliação formal, mas ela não abrange toda a gestão de riscos e/ou não resultam em ajustes.',
+              'Existe uma avaliação formal, mas ela não abrange toda a gestão de riscos e/ou não resulta em ajustes.',
           },
           {
             valor: 3,
@@ -556,7 +562,7 @@ export const EIXOS_FGRC: EixoFgrc[] = [
         totalNoEixo: 3,
         nist: 'NIST → PR.AA-01 e PR.IR-01',
         pergunta:
-          'Quando um servidor é desligado, transferido ou muda de função, o município possui um processo para revisar ou revogar seus acessos, incluindo acessos remotos em tempo hábil?',
+          'Quando um servidor é desligado, transferido ou muda de função, o município possui um processo para revisar ou revogar seus acessos, incluindo acessos remotos, em tempo hábil?',
         alternativas: [
           {
             valor: 0,
@@ -580,7 +586,7 @@ export const EIXOS_FGRC: EixoFgrc[] = [
             valor: 3,
             titulo: 'Estabelecida',
             descricao:
-              'Existe um procedimento formal e conhecido para revogação de acessos inclusive remotos aplicado de forma consistente e em prazo definido.',
+              'Existe um procedimento formal e conhecido para revogação de acessos, inclusive remotos, aplicado de forma consistente e em prazo definido.',
           },
           {
             valor: 4,
@@ -882,7 +888,8 @@ export const EIXOS_FGRC: EixoFgrc[] = [
         eixoNome: 'Backup e Recuperação de Dados',
         numeroNoEixo: 1,
         totalNoEixo: 2,
-        nist: 'NIST → PR.DS-1',
+        // [integração 25/11] no formulário estava "PR.DS-1" (faltou um 1): o código de backup no NIST CSF 2.0 é o PR.DS-11
+        nist: 'NIST → PR.DS-11',
         pergunta:
           'O município realiza, protege, mantém e testa backups dos dados necessários à continuidade de suas atividades?',
         alternativas: [
@@ -991,7 +998,9 @@ export const EIXOS_FGRC: EixoFgrc[] = [
         eixoNome: 'Proteção de Rede e Infraestrutura',
         numeroNoEixo: 1,
         totalNoEixo: 2,
-        nist: 'NIST → PR.DS-02, PR.PT-04',
+        // [integração 25/11] no formulário estava "PR.DS-02, PR.PT-04"
+        // o PR.PT-04 é da versão antiga do NIST (1.1) e saiu na 2.0: a parte de proteger a rede foi pro PR.IR-01
+        nist: 'NIST → PR.DS-02, PR.IR-01',
         pergunta:
           'O município utiliza firewalls e segmentação de rede para proteger os sistemas internos e separar redes de acordo com sua função ou criticidade, incluindo a separação da rede Wi-Fi de visitantes da rede interna?',
         alternativas: [
@@ -1040,7 +1049,10 @@ export const EIXOS_FGRC: EixoFgrc[] = [
         eixoNome: 'Proteção de Rede e Infraestrutura',
         numeroNoEixo: 2,
         totalNoEixo: 2,
-        nist: 'NIST → PR.PT-01, SC.CO-04',
+        // [integração 25/11] no formulário estava "PR.PT-01, SC.CO-04"
+        // o PR.PT-01 era da versão 1.1 (registros/logs) e virou PR.PS-04; já "SC.CO-04" não existe no NIST CSF
+        // acesso remoto na 2.0 = PR.AA-03 (autenticação), PR.AA-05 (permissões) e PR.IR-01 (rede protegida)
+        nist: 'NIST → PR.AA-03, PR.AA-05, PR.IR-01 e PR.PS-04',
         pergunta:
           'O acesso remoto à rede do município, realizado por servidores em trabalho remoto ou por prestadores de serviço, é feito por canais seguros e controlados, com autenticação adequada e registro das conexões?',
         alternativas: [
@@ -1370,7 +1382,9 @@ export const EIXOS_FGRC: EixoFgrc[] = [
         eixoNome: 'Pessoas e Conscientização',
         numeroNoEixo: 1,
         totalNoEixo: 5,
-        nist: 'Orientações de segurança',
+        // [integração 25/11] o formulário não tinha referência NIST nesse eixo (aqui ficava só o tema: "Orientações de segurança")
+        // PR.AT-01 no NIST CSF 2.0 = conscientização e treinamento de todo o pessoal
+        nist: 'NIST → PR.AT-01',
         pergunta:
           'Como os servidores recebem orientações para utilizar computadores, sistemas e informações da prefeitura com segurança?',
         alternativas: [
@@ -1397,6 +1411,14 @@ export const EIXOS_FGRC: EixoFgrc[] = [
             descricao:
               'as orientações são repassadas aos novos servidores e reforçadas periodicamente com os demais.',
           },
+          // [integração 25/11] nível 4 que faltava no eixo AWR (os outros eixos já iam até 4)
+          // texto proposto a partir da solução do nível 3: o grupo precisa aprovar e colocar no Formulário também
+          {
+            valor: 4,
+            titulo: 'Aprimorada',
+            descricao:
+              'as orientações são repassadas e reforçadas, e a prefeitura revisa periodicamente o conteúdo e os registros de participação para acompanhar as mudanças nos sistemas e nas rotinas de trabalho.',
+          },
         ],
         solucoes: {
           faixa0ou1:
@@ -1414,7 +1436,9 @@ export const EIXOS_FGRC: EixoFgrc[] = [
         eixoNome: 'Pessoas e Conscientização',
         numeroNoEixo: 2,
         totalNoEixo: 5,
-        nist: 'Golpes e mensagens suspeitas',
+        // [integração 25/11] o formulário não tinha referência NIST nesse eixo (aqui ficava só o tema: "Golpes e mensagens suspeitas")
+        // PR.AT-01 no NIST CSF 2.0 = conscientização e treinamento de todo o pessoal (inclui reconhecer golpes)
+        nist: 'NIST → PR.AT-01',
         pergunta:
           'Os servidores recebem orientações para identificar golpes por e-mail, mensagens ou telefone, como pedidos falsos de senha ou pagamento?',
         alternativas: [
@@ -1440,6 +1464,14 @@ export const EIXOS_FGRC: EixoFgrc[] = [
             descricao:
               'todos os setores recebem orientações preventivas, reforçadas periodicamente com exemplos de golpes.',
           },
+          // [integração 25/11] nível 4 que faltava no eixo AWR (os outros eixos já iam até 4)
+          // texto proposto a partir da solução do nível 3: o grupo precisa aprovar e colocar no Formulário também
+          {
+            valor: 4,
+            titulo: 'Aprimorada',
+            descricao:
+              'todos os setores recebem orientações preventivas, os exemplos são atualizados conforme os golpes identificados e exercícios simples verificam se os servidores reconhecem os sinais de fraude.',
+          },
         ],
         solucoes: {
           faixa0ou1:
@@ -1457,7 +1489,9 @@ export const EIXOS_FGRC: EixoFgrc[] = [
         eixoNome: 'Pessoas e Conscientização',
         numeroNoEixo: 3,
         totalNoEixo: 5,
-        nist: 'Comunicação de situações suspeitas',
+        // [integração 25/11] o formulário não tinha referência NIST nesse eixo (aqui ficava só o tema: "Comunicação de situações suspeitas")
+        // PR.AT-01 no NIST CSF 2.0 = conscientização e treinamento de todo o pessoal (inclui avisar situações suspeitas)
+        nist: 'NIST → PR.AT-01',
         pergunta:
           'Os servidores são orientados sobre quem procurar ao perceber uma situação suspeita, como uma mensagem falsa ou um possível acesso indevido?',
         alternativas: [
@@ -1483,6 +1517,14 @@ export const EIXOS_FGRC: EixoFgrc[] = [
             descricao:
               'todos os servidores recebem orientação sobre o contato ou canal e sobre como comunicar a situação.',
           },
+          // [integração 25/11] nível 4 que faltava no eixo AWR (os outros eixos já iam até 4)
+          // texto proposto a partir da solução do nível 3: o grupo precisa aprovar e colocar no Formulário também
+          {
+            valor: 4,
+            titulo: 'Aprimorada',
+            descricao:
+              'todos os servidores são orientados, e a prefeitura confere periodicamente se o contato ou canal continua válido e verifica, com perguntas ou exercícios simples, se os servidores sabem como utilizá-lo.',
+          },
         ],
         solucoes: {
           faixa0ou1:
@@ -1500,7 +1542,9 @@ export const EIXOS_FGRC: EixoFgrc[] = [
         eixoNome: 'Pessoas e Conscientização',
         numeroNoEixo: 4,
         totalNoEixo: 5,
-        nist: 'Capacitação dos responsáveis por sistemas e acessos',
+        // [integração 25/11] o formulário não tinha referência NIST nesse eixo (aqui ficava só o tema: "Capacitação dos responsáveis por sistemas e acessos")
+        // PR.AT-02 no NIST CSF 2.0 = treinamento de quem tem função especializada (inclui terceirizados)
+        nist: 'NIST → PR.AT-02',
         pergunta:
           'As pessoas responsáveis por administrar sistemas ou liberar acessos recebem capacitação de segurança voltada às suas funções? Considere também os profissionais terceirizados.',
         alternativas: [
@@ -1526,6 +1570,14 @@ export const EIXOS_FGRC: EixoFgrc[] = [
             descricao:
               'todos os responsáveis recebem capacitação adequada às suas funções, atualizada conforme mudanças nos sistemas ou nas atribuições.',
           },
+          // [integração 25/11] nível 4 que faltava no eixo AWR (os outros eixos já iam até 4)
+          // texto proposto a partir da solução do nível 3: o grupo precisa aprovar e colocar no Formulário também
+          {
+            valor: 4,
+            titulo: 'Aprimorada',
+            descricao:
+              'todos os responsáveis são capacitados, as necessidades de capacitação são revisadas a cada mudança nos sistemas ou nas atribuições e a prefeitura verifica se os conhecimentos adquiridos são aplicados no trabalho.',
+          },
         ],
         solucoes: {
           faixa0ou1:
@@ -1543,7 +1595,9 @@ export const EIXOS_FGRC: EixoFgrc[] = [
         eixoNome: 'Pessoas e Conscientização',
         numeroNoEixo: 5,
         totalNoEixo: 5,
-        nist: 'Verificação do aprendizado',
+        // [integração 25/11] o formulário não tinha referência NIST nesse eixo (aqui ficava só o tema: "Verificação do aprendizado")
+        // PR.AT-01 no NIST CSF 2.0 = conscientização e treinamento de todo o pessoal (inclui conferir se a pessoa aprendeu)
+        nist: 'NIST → PR.AT-01',
         pergunta:
           'A prefeitura verifica se os servidores compreenderam as orientações e os treinamentos de segurança?',
         alternativas: [
@@ -1570,6 +1624,14 @@ export const EIXOS_FGRC: EixoFgrc[] = [
             descricao:
               'verifica o aprendizado nos treinamentos e usa os resultados para reforçar os assuntos que geraram dúvidas.',
           },
+          // [integração 25/11] nível 4 que faltava no eixo AWR (os outros eixos já iam até 4)
+          // texto proposto a partir da solução do nível 3: o grupo precisa aprovar e colocar no Formulário também
+          {
+            valor: 4,
+            titulo: 'Aprimorada',
+            descricao:
+              'verifica o aprendizado nos treinamentos, compara os resultados ao longo do tempo e ajusta os conteúdos e a forma de orientação quando as dificuldades persistem.',
+          },
         ],
         solucoes: {
           faixa0ou1:
@@ -1595,7 +1657,9 @@ export const EIXOS_FGRC: EixoFgrc[] = [
         eixoNome: 'Terceiros, Fornecedores e Nuvem',
         numeroNoEixo: 1,
         totalNoEixo: 2,
-        nist: 'NIST → ID.SC-01, ID.SC-02',
+        // [integração 25/11] no formulário estava "ID.SC-01, ID.SC-02" (códigos da versão 1.1, que saíram na 2.0)
+        // na 2.0 os fornecedores ficam em GV.SC: 05 = exigências nos contratos, 06 = avaliar antes de contratar, 07 = acompanhar o fornecedor
+        nist: 'NIST → GV.SC-05, GV.SC-06 e GV.SC-07',
         pergunta:
           'O município possui critérios de segurança e requisitos de proteção de dados formalizados nos contratos com prestadores de serviços de TI e fornecedores de sistemas (inclusive em nuvem)?',
         alternativas: [
@@ -1646,7 +1710,9 @@ export const EIXOS_FGRC: EixoFgrc[] = [
         eixoNome: 'Terceiros, Fornecedores e Nuvem',
         numeroNoEixo: 2,
         totalNoEixo: 2,
-        nist: 'NIST → ID.SC-04, PR.AA-01',
+        // [integração 25/11] no formulário estava "ID.SC-04, PR.AA-01" (o ID.SC-04 é da versão 1.1 e virou GV.SC-07)
+        // GV.SC-10 = tirar o acesso do fornecedor quando o serviço acaba | DE.CM-06 = acompanhar o que o prestador faz nos sistemas
+        nist: 'NIST → GV.SC-07, GV.SC-10, PR.AA-01 e DE.CM-06',
         pergunta:
           'O acesso de terceiros (suporte técnico externo, fornecedores de software) aos sistemas da prefeitura é controlado, monitorado e revogado após o término do atendimento?',
         alternativas: [

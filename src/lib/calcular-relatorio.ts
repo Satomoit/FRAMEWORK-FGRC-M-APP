@@ -4,6 +4,8 @@ import type { Recommendation, Report } from '@/features/p06-relatorios-recomenda
 import { TODAS_QUESTOES_FGRC } from '@/features/p03-avaliacoes-questionario/questionarioData';
 import type { AvaliacaoRegistrada, RespostaRegistrada } from '@/lib/avaliacoes-reais';
 import { dataDa, dataHoraDa } from '@/lib/datas';
+// [integração 25/11] explicação em palavras simples de cada solução ("Ficou com dúvida em como resolver?")
+import { explicacaoSimples } from '@/lib/explicacoes-simples';
 
 // [integração] nota máxima de cada pergunta
 // o formulário do grupo tem 0 a 4 na maioria, mas o eixo AWR (Nicole) vai só de 0 a 3
@@ -11,8 +13,15 @@ import { dataDa, dataHoraDa } from '@/lib/datas';
 const maximoPorQuestao = new Map(
   TODAS_QUESTOES_FGRC.map(q => [q.id, Math.max(...q.alternativas.map(a => a.valor))]),
 );
+// [integração 25/11] o eixo AWR ganhou o nível 4, então hoje todas as perguntas vão de 0 a 4
+// só que avaliação já salva NÃO pode mudar de nota por causa disso:
+//  - a que guardou o valorMaximo (3 no AWR) continua usando o que guardou
+//  - a bem antiga, que nem guardava o valorMaximo, foi feita quando o AWR ia até 3, então usa 3 nele
+const MAXIMO_ANTIGO_DO_AWR = 3;
 export function valorMaximoDa(r: Pick<RespostaRegistrada, 'id' | 'valorMaximo'>): number {
-  return r.valorMaximo ?? maximoPorQuestao.get(r.id) ?? 4;
+  if (typeof r.valorMaximo === 'number') return r.valorMaximo;
+  if (/-AWR$/.test(r.id)) return MAXIMO_ANTIGO_DO_AWR;
+  return maximoPorQuestao.get(r.id) ?? 4;
 }
 
 // este é um índice operacional de exposição: 0 = menor exposição, 100 = maior exposição
@@ -28,11 +37,28 @@ const exposicao = (respostas: Pick<RespostaRegistrada, 'id' | 'valor' | 'valorMa
 
 // [integração] texto curto que explica como ler o resultado (vai no PDF)
 // linguagem simples pq quem lê é a equipe da prefeitura, não um técnico
-export const EXPLICACAO_DO_CALCULO =
+// [integração 25/11] o texto virou uma função pq agora depende da avaliação:
+//  - avaliação nova: todas as perguntas vão de 0 a 4
+//  - avaliação feita antes de 25/11: o eixo de Pessoas e Conscientização (AWR) ia só até 3, e o PDF dela continua dizendo isso
+const LEITURA_DO_INDICE =
   'Como ler este relatório: o índice vai de 0 a 100. Quanto maior o número, mais exposta a prefeitura está a riscos cibernéticos. ' +
-  'Até 33 o resultado é Baixo, de 34 a 66 é Intermediário e de 67 a 100 é Alto. ' +
-  'Cada resposta vale de 0 (Inexistente) a 4 (Aprimorada); nas perguntas sobre Pessoas e Conscientização, a escala vai até 3 (Estabelecida). ' +
-  'As faixas ainda serão validadas pelo orientador do projeto.';
+  'Até 33 o resultado é Baixo, de 34 a 66 é Intermediário e de 67 a 100 é Alto. ';
+const ESCALA_ATUAL = 'Cada resposta vale de 0 (Inexistente) a 4 (Aprimorada). ';
+const ESCALA_ANTIGA =
+  'Cada resposta vale de 0 (Inexistente) a 4 (Aprimorada); nesta avaliação, as perguntas sobre Pessoas e Conscientização iam até 3 (Estabelecida). ';
+const AVISO_DAS_FAIXAS = 'As faixas ainda serão validadas pelo orientador do projeto.';
+
+export function explicacaoDoCalculo(respostas: Pick<RespostaRegistrada, 'id' | 'valorMaximo'>[] = []): string {
+  const temPerguntaAte3 = respostas.some(r => valorMaximoDa(r) < 4);
+  return LEITURA_DO_INDICE + (temPerguntaAte3 ? ESCALA_ANTIGA : ESCALA_ATUAL) + AVISO_DAS_FAIXAS;
+}
+// nome antigo continua existindo (texto de uma avaliação nova) pra quem ainda importar a constante
+export const EXPLICACAO_DO_CALCULO = explicacaoDoCalculo();
+
+// [integração 25/11] frase curta pra tela de Detalhes do resultado
+// sem ela dá pra confundir com nota de escola (achar que 20/100 é ruim, quando aqui número baixo é o resultado bom)
+export const COMO_LER_O_INDICE =
+  'Quanto maior o número, maior a exposição a riscos. Até 33: Baixo. De 34 a 66: Intermediário. De 67 a 100: Alto.';
 
 // [integração] as perguntas do eixo AWR não têm referência NIST no formulário
 // nelas o campo guarda o tema da pergunta, então mostramos isso escrito do jeito certo
@@ -92,12 +118,18 @@ export function paraRelatorio(avaliacao: AvaliacaoRegistrada): Report {
 }
 
 export function recomendacoesDaAvaliacao(avaliacao: AvaliacaoRegistrada): Recommendation[] {
-  return avaliacao.respostas.filter(r => r.recomendacao !== null).map(r => ({
+  const lista: Recommendation[] = avaliacao.respostas.filter(r => r.recomendacao !== null).map(r => ({
     code: r.codigo,
     priority: (r.valor <= 1 ? 'alta' : 'média') as 'alta' | 'média',
     answerValue: r.valor,
     answerLabel: r.alternativa,
     solution: r.recomendacao!,
     reference: textoReferencia(r.nist),
+    // [integração 25/11] explicação em palavras simples da mesma solução (fica undefined se não tiver)
+    simpleExplanation: explicacaoSimples(r.id, r.valor, r.recomendacao) ?? undefined,
   }));
+  // [integração 25/11] as de prioridade alta (notas 0 e 1) vêm primeiro, depois as de média (notas 2 e 3)
+  // o Mapeamento do grupo pede as recomendações divididas por prioridade, e assim a pessoa já vê o mais urgente
+  // dentro de cada grupo continua a ordem do questionário (GOV, AST, IAM...)
+  return [...lista.filter(r => r.priority === 'alta'), ...lista.filter(r => r.priority === 'média')];
 }
